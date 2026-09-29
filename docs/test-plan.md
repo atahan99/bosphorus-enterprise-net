@@ -152,8 +152,8 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 | Check | Where | Expected |
 |---|---|---|
 | `show ip bgp summary` | EDGE-01 | ISP-A neighbor down |
-| `show ip route 0.0.0.0` | EDGE-01 | O*E2 via the core (EDGE-02's default); EDGE-01 no longer originates one |
-| `show ip route 0.0.0.0` | CORE-01 | O*E2 via EDGE-02 |
+| `show ip route 0.0.0.0` | EDGE-01 | No default (`Gateway of last resort is not set`); EDGE-01 no longer originates one |
+| `show ip route 0.0.0.0` | CORE-01, CORE-02 | `S* 0.0.0.0/0 [250/0]`, the floating static towards EDGE-02 (B-25) |
 | Browse www.example.test, then `show ip nat translations` | LON-PC-ENG-01, then EDGE-02 | Works; translated to **203.0.113.2** |
 | `show ip bgp` | INET-CORE | The two /25s are gone; only 203.0.113.0/24 via ISP-B remains |
 | `show ip ospf neighbor` | IST-RTR-01 | Tunnel0 neighbor gone after the dead timer, Tunnel1 FULL |
@@ -162,9 +162,15 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 Before the priority change, check that browsing 203.0.113.10 from INET-HOST-01 **fails** and record it: this is the gap left by the missing HSRP tracking.
 
-**Restore:** `no shutdown` on ISP-A Fa0/0 and `standby 100 priority 110` on EDGE-01 Gi0/0/2. Everything returns to EDGE-01 (DMZ HSRP preempts, OSPF default via EDGE-01 again, /25s re-advertised).
+**Restore:** `no shutdown` on ISP-A Fa0/0 and `standby 100 priority 110` on EDGE-01 Gi0/0/2. Then, for Packet Tracer (tested in Phase 5):
 
-**Also check (matrix B-25):** before the failure, `show ip route 0.0.0.0` on LON-CORE-02 must point at EDGE-01 through CORE-01, not at EDGE-02. That proves the cost-1000 tie-break works for equal E2 defaults.
+1. Press **Fast Forward Time** a few times until EDGE-01's `show ip bgp summary` shows a fresh Up/Down time (B-39).
+2. On EDGE-01: `router ospf 1` → `no default-information originate` → `default-information originate` (B-37).
+3. On EDGE-02: `clear ip bgp *`, then Fast Forward Time again, so INET-CORE learns 203.0.113.0/25 again (B-38).
+
+Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via EDGE-01, and INET-CORE shows both /25s via ISP-A.
+
+**Also check (matrix B-25):** before the failure, `show ip route 0.0.0.0` on LON-CORE-01 and LON-CORE-02 must show a single O*E2 path, advertised by 10.255.255.1 (EDGE-01).
 
 **Evidence:** `T04-before-*.png`, `T04-after-*.png`. **Actual:**
 

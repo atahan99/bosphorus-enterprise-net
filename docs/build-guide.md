@@ -171,22 +171,26 @@ Inter-VLAN ACLs aren't applied until Phase 7, so at this point every London VLAN
 
 1. ISP-A, ISP-B, INET-CORE, INET-SW (whole files).
 2. The `Phase 5` section on LON-EDGE-01 and LON-EDGE-02.
+3. The `Phase 5` section on LON-CORE-01 and LON-CORE-02 (floating static default towards EDGE-02).
+4. Once EDGE-01's `show ip bgp summary` shows ISP-A with prefixes, re-enter the default on EDGE-01: `router ospf 1` → `no default-information originate` → `default-information originate`. PT only starts originating if the BGP default is already in the table (B-37). Do the same after reopening the saved lab if the cores show `S*` instead of `O*E2`.
+
+Only EDGE-01 originates the OSPF default: PT load-shares two equal E2 defaults, which would break NAT (B-25, ADR 0001). If BGP looks stuck after a link change, press **Fast Forward Time** (B-39).
 
 **Verify:**
 
 | Command / action | Where | Expected |
 |---|---|---|
 | `show ip bgp summary` | EDGE-01, EDGE-02 | Their ISP neighbor established, prefixes received (including 0.0.0.0/0) |
-| `show ip bgp` | INET-CORE | 203.0.113.0/25 and 203.0.113.128/25 via ISP-A (`65001 65100`); 203.0.113.0/24 via ISP-B (`65002 65100`) |
-| `show ip route 0.0.0.0` | CORE-01 and CORE-02 | O*E2 towards LON-EDGE-01 (CORE-02 via CORE-01, not via the cost-1000 link to EDGE-02) |
+| `show ip bgp` | INET-CORE | 203.0.113.0/25 and 203.0.113.128/25 best via ISP-A (`65001 65100`). The /24 from EDGE-02 is usually missing here: PT keeps only one of 203.0.113.0/24 and /25 (B-38) |
+| `show ip route 0.0.0.0` | CORE-01 and CORE-02 | One O*E2 path, from 10.255.255.1 (EDGE-01); CORE-02 via CORE-01. The floating static (AD 250) stays hidden |
 | `show standby brief` | EDGE-01 | DMZ group 100 Active |
 | Browse `http://www.example.test` | LON-PC-ENG-01 | Internet page loads |
 | `show ip nat translations` | EDGE-01 | PC's address translated to 203.0.113.1 |
 | `show policy-map type inspect zone-pair sessions` | EDGE-01 | Inspected session for the browse |
 | Browse `http://203.0.113.10` and `http://www.bosphorus.test` | INET-HOST-01 | Public site loads |
-| Browse `http://www.bosphorus.test` | LON-PC-ENG-01 | Loads via split DNS (172.16.100.10) |
+| Browse `http://www.bosphorus.test`, `nslookup www.bosphorus.test` | LON-PC-ENG-01 | Loads via split DNS (172.16.100.10); no new NAT entry |
 
-**Screenshots:** `phase5-bgp-summary-edge01.png`, `phase5-bgp-table-inet-core.png`, `phase5-nat-edge01.png`, `phase5-browse-from-internet.png`.
+**Screenshots:** `phase5-bgp-summary-edge01.png`, `phase5-bgp-summary-edge02.png`, `phase5-bgp-table-inet-core.png`, `phase5-default-route-core01.png`, `phase5-default-route-core02.png`, `phase5-hsrp-dmz-edge01.png`, `phase5-nat-edge01.png`, `phase5-zbf-sessions-edge01.png`, `phase5-split-dns-pc-eng01.png`, `phase5-browse-from-internet.png`, plus `phase5-topology-full.png` and the close-ups `phase5-topology-part1-internet.png`, `part2-london-edge-dmz.png`, `part3-phase-notes.png`.
 
 ---
 

@@ -158,10 +158,10 @@ Packet Tracer supports eBGP only: no iBGP, prefix-lists, route-maps, session pas
 
 ### Egress and ingress: the key design decision
 
-- **Outbound:** each edge runs `default-information originate` into OSPF (without `always`). Packet Tracer can't set its metric, so both are E2 metric 1. The EDGE-02 ↔ LON-CORE-02 link costs 1000, so EDGE-01 is the nearer ASBR and wins everywhere.
+- **Outbound:** only EDGE-01 runs `default-information originate` into OSPF (without `always`). Packet Tracer load-shares two equal E2 defaults and can't set their metric (matrix B-25), so LON-CORE-01/02 instead carry a floating static default (AD 250) towards EDGE-02.
 - **Inbound:** longest match. The internet prefers EDGE-01's /25s via ISP-A over EDGE-02's /24 via ISP-B.
 - **Why active/standby rather than load-sharing:** each edge translates to its own PAT address. Traffic that left via EDGE-01 and returned via EDGE-02 would hit a router with no NAT entry and break.
-- **Failure behaviour:** if the ISP-A link or EDGE-01 fails, EDGE-01 loses its BGP default, stops originating the OSPF default and its /25s are withdrawn. Both directions move to EDGE-02 together. The DMZ gateway (HSRP) can't track the ISP link in Packet Tracer, so it is moved by hand during the test. See [ADR 0001](adr/0001-active-standby-internet-edge.md).
+- **Failure behaviour:** if the ISP-A link or EDGE-01 fails, EDGE-01 loses its BGP default, stops originating the OSPF default and its /25s are withdrawn. The cores fall back to their floating statics, so both directions move to EDGE-02 together. Failback needs a manual step in Packet Tracer (B-37). The DMZ gateway (HSRP) can't track the ISP link in Packet Tracer, so it is moved by hand during the test. See [ADR 0001](adr/0001-active-standby-internet-edge.md).
 
 ## 8. WAN and VPN
 
