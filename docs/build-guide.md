@@ -20,7 +20,8 @@ Tips:
 
 ## After every phase
 
-- Save the `.pkt` as `pkt/bosphorus-enterprise-net.pkt`.
+- Add a visible note box to the workspace with the phase number, site/subnet scope, active protocols and any Packet Tracer fallback used. Keep notes clear of devices and links.
+- Save a phase checkpoint as `pkt/phase-N.pkt`, then also refresh `pkt/bosphorus-enterprise-net.pkt` as the latest canonical copy.
 - Take the listed screenshots and save them in `screenshots/` with the given names.
 - If this folder is a Git repository, commit and tag: `git add -A && git commit -m "Phase N: <summary>" && git tag phase-N`. If it is not, initialize Git once before Phase 0 or skip the Git checkpoint; saving the `.pkt` remains required.
 
@@ -29,6 +30,8 @@ Tips:
 ## Phase 0: feature validation
 
 Follow [`phase0/phase0-feature-tests.md`](../phase0/phase0-feature-tests.md) before placing the production topology. Phase 0 is a required compatibility gate: record each result in [`pt-support-matrix.md`](pt-support-matrix.md) and apply the documented fallback before using a rejected command in the main lab.
+
+**Checkpoint:** save the scratch lab as `phase0/phase0-scratch.pkt`, with a labeled summary box on the canvas. Capture `phase0/evidence/phase0-final-labeled.png` and record the run in `phase0/phase0-results.md`.
 
 ---
 

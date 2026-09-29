@@ -2,11 +2,11 @@
 
 Before building the real topology, confirm which "needs testing" features Packet Tracer 9 actually supports. This avoids designing around a command that turns out to be `% Invalid input` halfway through the build.
 
-**Time:** 2–3 hours. **Output:** every row in [`docs/pt-support-matrix.md`](../docs/pt-support-matrix.md) marked ✅ / ⚠️ / ❌, and `phase0/phase0-scratch.pkt` saved.
+**Time:** 2–3 hours. **Output:** every row in [`docs/pt-support-matrix.md`](../docs/pt-support-matrix.md) marked ✅ / ⚠️ / ❌, `phase0/phase0-scratch.pkt` saved, and labeled evidence captured in `phase0/evidence/`.
 
 ## How to run it
 
-1. Build the scratch topology in §1 (8 devices).
+1. Build the scratch topology in §1 (9 devices).
 2. Work through the tests in order. Each test has **commands to paste** and a **pass check**.
 3. For each test, record the result in the support matrix:
    - ✅ all commands accepted and the pass check succeeds
@@ -15,6 +15,8 @@ Before building the real topology, confirm which "needs testing" features Packet
 4. When a command is rejected, copy the exact command and the `% Invalid input` line into the matrix's Notes column. If you get stuck, paste the output back to Claude.
 
 Paste config in **global configuration mode** (`enable` → `configure terminal`) unless a block starts with `enable`. Credentials are lab-only.
+
+> **Script/MCP CLI note:** explicitly send `exit` after every interface, router, crypto-policy or other configuration submode before entering the next one. Packet Tracer's script-driven CLI can otherwise keep later commands in the previous submode without an obvious failure; during this run that initially put multiple interface addresses on the first interface. Manual GUI/CLI pastes should also preserve the `exit` lines shown in the production configs.
 
 ## 1. Scratch topology
 

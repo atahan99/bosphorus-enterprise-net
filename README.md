@@ -83,7 +83,7 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Packet Tracer feature validation | 🔄 In progress |
+| 0 | Packet Tracer feature validation | ✅ |
 | 1 | Design documents, configs and diagrams | ✅ |
 | 2 | Place and cable devices | ⏳ |
 | 3 | London switching | ⏳ |
