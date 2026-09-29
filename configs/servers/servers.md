@@ -44,7 +44,7 @@ The server picks the pool whose gateway matches the relaying SVI's subnet, so th
 
 ### Services → AAA (On)
 
-**Network configuration (clients).** Packet Tracer has no `ip tacacs source-interface` (matrix B-01), so each device's TACACS+ request comes from the interface it leaves by. Register that address. Where a second path exists, add the backup-path address as another client so logins still work after a failover.
+**Network configuration (clients).** Packet Tracer has no `ip tacacs source-interface` (matrix B-01), so each device's TACACS+ request comes from the interface it leaves by. Register that address. Where a second path exists, add the backup-path address as another client so logins still work after a failover. Packet Tracer needs a unique client name per entry, so each backup address is its own row named `<HOSTNAME>-B` (for example `LON-WAN-01-B` / 10.255.0.18), and rows that list two switches become one entry per switch: **25 client entries** in all (24 Tacacs, 1 Radius). Entered in the Phase 4 build; see `screenshots/phase4-aaa-clients-part1.png` … `part4.png`.
 
 | Client name | Client IP | Also add (backup path) | Secret | Type |
 |---|---|---|---|---|
