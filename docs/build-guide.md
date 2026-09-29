@@ -288,5 +288,5 @@ Run every test in [test-plan.md](test-plan.md) and record the results there, wit
 1. **Export final configs:** on each device, `show running-config`, copy the output into `configs/<site>/<HOSTNAME>.running.txt`. Also run the TFTP backup once from each IOS device to prove it works: `copy running-config tftp:` → `10.10.80.12` → accept the default filename.
 2. Fill in the Phase 0 matrix rows you didn't test, and anything you learned during the build.
 3. Update the README's build-progress table and test-results summary.
-4. Finish the blog draft in [`blog/`](../blog/) with the screenshots.
+4. Finish the blog draft (kept locally in `blog/`, which is git-ignored) with the screenshots.
 5. Push to GitHub, set the repo description and topics (`cisco`, `packet-tracer`, `networking`, `ccna`, `ccnp`, `network-security`, `bgp`, `ospf`, `ipsec`).

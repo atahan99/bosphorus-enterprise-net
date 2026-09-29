@@ -3,3 +3,6 @@ Thumbs.db
 *.bak
 *~
 .venv-packet-tracer-mcp/
+
+# Blog drafts stay local
+blog/

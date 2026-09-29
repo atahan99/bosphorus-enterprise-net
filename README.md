@@ -75,7 +75,6 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | [`configs/servers/`](configs/servers/) | Server, WLC, phone and endpoint settings (GUI-configured) |
 | [`diagrams/`](diagrams/) | Topology, Layer 2, routing, security-zone, VPN and wireless diagrams |
 | [`phase0/`](phase0/) | Feature-validation lab and procedure |
-| [`blog/`](blog/) | Write-up of the design and what I learned |
 | [`pkt/`](pkt/) | The Packet Tracer file |
 | [`screenshots/`](screenshots/) | Test evidence, named by test ID |
 

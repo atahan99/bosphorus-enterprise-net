@@ -329,7 +329,7 @@ Simulation-mode captures (ZBF drop, IPsec encapsulation, HSRP hellos) go in the 
 
 - **README:** summary and hero diagram, features table, diagrams, addressing summary, how to open, test results, PT limitations, repo map.
 - **Diagrams** ([`diagrams/`](../diagrams/), Mermaid so GitHub renders them): site overview; L2 VLANs, trunks, STP roots and blocked ports; L3 addressing, OSPF areas, EIGRP domain, BGP ASes; security zones; VPN overlay; wireless.
-- **Blog** ([`blog/`](../blog/)): "Building a four-site enterprise network in Packet Tracer, and what the simulator can't do." Sections: why rebuild without hardware; the scenario; three design problems (asymmetric NAT with two ISPs, the IPsec NAT exemption, integrating the EIGRP site); attacking my own Layer 2; break-it testing; the support matrix; what production would change (IKEv2/VTI, SD-WAN, 802.1X everywhere, SNMPv3, CoPP, VRRP).
+- **Blog** (drafted locally in `blog/`, git-ignored): "Building a four-site enterprise network in Packet Tracer, and what the simulator can't do." Sections: why rebuild without hardware; the scenario; three design problems (asymmetric NAT with two ISPs, the IPsec NAT exemption, integrating the EIGRP site); attacking my own Layer 2; break-it testing; the support matrix; what production would change (IKEv2/VTI, SD-WAN, 802.1X everywhere, SNMPv3, CoPP, VRRP).
 
 ## 18. Packet Tracer gotchas
 
