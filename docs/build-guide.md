@@ -159,7 +159,7 @@ Inter-VLAN ACLs aren't applied until Phase 7, so at this point every London VLAN
 | PC → IP Configuration → DHCP | Every London PC | Address in .100–.250 of their VLAN, gateway .1 |
 | `ping 10.10.80.13`, browse `http://intranet.corp.bosphorus.test` | LON-PC-ENG-01 | Works |
 
-**Screenshots:** `phase4-hsrp-core01.png`, `phase4-ospf-neighbors-core01.png`, `phase4-dhcp-pc-eng01.png`.
+**Screenshots:** `phase4-hsrp-core01.png`, `phase4-ospf-neighbors-core01.png`, `phase4-dhcp-pc-eng01.png`, plus `phase4-topology-full.png` and the close-ups `phase4-topology-part1-london-edge-core.png` … `part4-phase-notes.png`.
 
 ---
 

@@ -87,7 +87,7 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | 1 | Design documents, configs and diagrams | ✅ |
 | 2 | Place and cable devices | ✅ |
 | 3 | London switching | ✅ |
-| 4 | London routing and first-hop redundancy | ⏳ |
+| 4 | London routing and first-hop redundancy | ✅ |
 | 5 | Internet edge (BGP, NAT, ZBF, DMZ) | ⏳ |
 | 6 | Remote sites and VPNs | ⏳ |
 | 7 | Security and management | ⏳ |

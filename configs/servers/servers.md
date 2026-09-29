@@ -12,11 +12,11 @@ Addresses are in [addressing-plan.md](../../docs/addressing-plan.md). Credential
 
 ### Services → DHCP (On)
 
-The default pool `serverPool` can't be deleted, so it's used for VLAN 10 (the APs). Edit it, then **Add** the others. Every pool: subnet mask 255.255.255.0, maximum users 151 (addresses .100–.250). The branches run their own DHCP on their switch pairs (in their configs), so only London's scopes live here.
+The default pool `serverPool` can't be deleted. Leave it alone: its default gateway stays 0.0.0.0, so no relayed request ever matches it. **Add** the pools below, including a separate `VLAN10-MGMT` pool for the APs (in the Phase 4 build this was scripted, and the scripting API can't set the WLC option on an existing pool). Every pool: subnet mask 255.255.255.0, maximum users 151 (addresses .100–.250). The branches run their own DHCP on their switch pairs (in their configs), so only London's scopes live here.
 
 | Pool name | Default gateway | DNS server | Start IP | TFTP server | WLC address |
 |---|---|---|---|---|---|
-| serverPool (VLAN 10) | 10.10.10.1 | 10.10.80.10 | 10.10.10.100 | — | **10.10.10.20** |
+| VLAN10-MGMT | 10.10.10.1 | 10.10.80.10 | 10.10.10.100 | — | **10.10.10.20** |
 | VLAN20-ENG | 10.10.20.1 | 10.10.80.10 | 10.10.20.100 | — | — |
 | VLAN30-SALES | 10.10.30.1 | 10.10.80.10 | 10.10.30.100 | — | — |
 | VLAN40-FIN-HR | 10.10.40.1 | 10.10.80.10 | 10.10.40.100 | — | — |
