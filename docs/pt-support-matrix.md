@@ -90,6 +90,7 @@ Commands the configs rely on that aren't covered by Phase 0. Each config has the
 | B-30 | `securityk9` on the ISR4331 | ISR4331 | ✅ | A new ISR4331 in PT 9 already shows `securityk9  Permanent` as the current technology package; `license boot level securityk9` is accepted but no reload is needed. |
 | B-31 | Router-PT expansion slots 4 and 5 | Router-PT | ⚠️ | They hold fiber FastEthernet (PT-ROUTER-NM-1FFE), which refuses copper cables. Swapped for PT-ROUTER-NM-1CFE (copper) on ISP-A, ISP-B and INET-CORE; the port names FastEthernet4/0 and 5/0 are unchanged. |
 | B-32 | Wireless clients before Phase 8 | Laptop-PT, TabletPC-PT, SMARTPHONE-PT | ⚠️ | With every AP on its factory open SSID, clients associate with whichever AP answers, including other sites' APs. Their `Wireless0` radios are powered off from Phase 2 until the SSIDs are configured in Phase 8. |
+| B-33 | LACP Po1 between two 3650s | 3650-24PS | ⚠️ | After pasting the same `channel-group 1 mode active` config on both cores, Po1 stayed `(SD)` with both members `(s)` and no LACP neighbour; bouncing the members didn't help. Removing and re-adding the channel-group on both switches (`shutdown`, `no channel-group 1`, `channel-group 1 mode active`, `no shutdown`) brought Po1 up as `(SU)` with both members `(P)`. |
 
 ## Known unsupported, with the substitute used
 

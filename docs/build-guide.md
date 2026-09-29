@@ -22,7 +22,7 @@ Tips:
 
 - Add a visible note box to the workspace with the phase number, site/subnet scope, active protocols and any Packet Tracer fallback used. Keep notes clear of devices and links.
 - Save a phase checkpoint as `pkt/phase-N.pkt`, then also refresh `pkt/bosphorus-enterprise-net.pkt` as the latest canonical copy.
-- Take the listed screenshots and save them in `screenshots/` with the given names.
+- Take the listed screenshots and save them in `screenshots/` with the given names. Capture the whole canvas as `phaseN-topology-full.png` **and** close-ups of the areas the phase touched as `phaseN-topology-part1-<area>.png`, `part2-…`, and so on: the whole workspace is too large to read on its own, and the MCP's single-image capture fails once it exceeds the bridge's transfer limit.
 - If this folder is a Git repository, commit and tag: `git add -A && git commit -m "Phase N: <summary>" && git tag phase-N`. If it is not, initialize Git once before Phase 0 or skip the Git checkpoint; saving the `.pkt` remains required.
 
 ---
@@ -110,6 +110,18 @@ reload
 
 Paste the two cores first, then the access switches.
 
+If `show etherchannel summary` then shows `Po1(SD)` with the members `(s)` (matrix B-33), re-apply the channel-group on **both** cores:
+
+```
+interface range GigabitEthernet1/0/23 - 24
+ shutdown
+ no channel-group 1
+ channel-group 1 mode active
+ no shutdown
+```
+
+Po1 should come up as `(SU)` with both members `(P)` within a few seconds.
+
 **Verify:**
 
 | Command | Where | Expected |
@@ -125,7 +137,7 @@ Paste the two cores first, then the access switches.
 | `show port-security` | Access switches | Access ports listed |
 | `show ip dhcp snooping` | Access switches | Enabled on the listed VLANs, uplinks trusted |
 
-**Screenshots:** `phase3-etherchannel.png`, `phase3-stp-acc01-vlan10.png`, `phase3-stp-acc01-vlan20.png`, `phase3-trunks-core01.png`.
+**Screenshots:** `phase3-etherchannel.png`, `phase3-stp-acc01-vlan10.png`, `phase3-stp-acc01-vlan20.png`, `phase3-trunks-core01.png`, plus the whole canvas `phase3-topology-full.png` and close-ups `phase3-topology-part1-london-edge-core.png`, `part2-london-access.png`, `part3-phase-notes.png`.
 
 ---
 
