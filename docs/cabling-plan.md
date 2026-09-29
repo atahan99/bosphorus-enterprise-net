@@ -4,6 +4,30 @@ Everything needed for Phase 2: which device to drag in, which modules to add, an
 
 Port names below are what Packet Tracer 9 shows for these models. The MCP catalog can expose different names for some models. Run the build guide's throwaway MCP preflight first; if a name differs, keep the physical position and record the accepted MCP-to-GUI mapping here before building the production file.
 
+### MCP preflight results (2026-09-29)
+
+Every model was placed in a throwaway file and read back live. Use the live names below; the MCP's static catalog is wrong for the 3650, the ASA and Router-PT.
+
+| Model | Live port names | Catalog said |
+|---|---|---|
+| 3650-24PS | `GigabitEthernet1/0/1`–`1/0/24`, `GigabitEthernet1/1/1`–`1/1/4` | `FastEthernet0/x`, `GigabitEthernet0/1–2` |
+| ASA 5506-X | `GigabitEthernet1/1`–`1/8`, `Management1/1` | `GigabitEthernet1/0`–`1/7` |
+| Router-PT | `FastEthernet0/0`, `1/0`, `4/0`, `5/0`, `Serial2/0`, `3/0` | `FastEthernet0/0`, `0/1` |
+| IP Phone 7960 | `Switch` (to the access switch), `PC` (to the desk PC) | `Port 0`, `PC Port` |
+| 3702i (LAP) | `GigabitEthernet0` | same |
+| WLC-3504 | `GigabitEthernet1`–`5` | `GigabitEthernet1`–`4` |
+
+| Module | Device | MCP slot | Result |
+|---|---|---|---|
+| NIM-2T | ISR4331 | `0/1` | `Serial0/1/0`–`0/1/1` |
+| HWIC-2T | ISR2911 | `0/0` | `Serial0/0/0`–`0/0/1` |
+| AC-POWER-SUPPLY | 3650-24PS | `2/4` | installed |
+| IP_PHONE_POWER_ADAPTER | 7960 | `0/0` | installed |
+| ACCESS_POINT_POWER_ADAPTER | 3702i | `1` | installed |
+| Linksys-WPC300N | Laptop-PT | `0` | remove the wired NIC in slot `0` first (`removeModule("0")`), then add with module type `"9"`; the laptop then shows `Wireless0` |
+
+With the MCP's `addLink`, the **first** device of a serial link becomes the DCE end (`show controllers` → `DCE V.35, clock rate 2000000`), so LON-WAN-01 is always listed first.
+
 ## 1. Devices and modules
 
 Power off a device (Physical tab) before adding modules, then power it back on.
@@ -26,7 +50,7 @@ Power off a device (Physical tab) before adding modules, then power it back on.
 | CHI-SW-01, CHI-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
 | TOR-RTR-01 | ISR2911 | **HWIC-2T** in GUI slot 0 → Serial0/0/0–1. With MCP, install it using slot `0/0` |
 | TOR-SW-01, TOR-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
-| ISP-A, ISP-B, INET-CORE | Router-PT | None (FastEthernet0/0, 1/0, 4/0, 5/0). If Phase 0 shows Router-PT lacks a BGP feature, swap for ISR4331 + NIM-ES2-4 |
+| ISP-A, ISP-B, INET-CORE | Router-PT | Replace the modules in slots **4 and 5** with **PT-ROUTER-NM-1CFE**: Router-PT ships with fiber FastEthernet (PT-ROUTER-NM-1FFE) there, which won't take the copper cables below. Port names stay FastEthernet4/0 and 5/0. BGP on Router-PT was verified in Phase 0 |
 | INET-SW | 2960-24TT | None |
 
 ### Wireless
@@ -172,7 +196,7 @@ Suggested placement so screenshots read left to right:
 
 ## 5. Done-when for Phase 2
 
-- [ ] Every link in §2 is green on both ends once interfaces are enabled.
-- [ ] Hostnames set on all devices.
-- [ ] Every infrastructure interface has a description in the form `TO-<peer>-<peer-port>`.
-- [ ] `show cdp neighbors` on each router and switch matches this file.
+- [x] Every link in §2 is green on both ends once interfaces are enabled (all 190 cabled ports up with the ISP routers' interfaces temporarily enabled).
+- [x] Hostnames set on all devices (the ISP routers, INET-SW and the WLC get theirs with their Phase 5 / Phase 8 config).
+- [ ] Every infrastructure interface has a description in the form `TO-<peer>-<peer-port>`: routers and the ASA done in Phase 2; the switch uplinks get theirs from the Phase 3, 4 and 6 sections.
+- [x] `show cdp neighbors` on each router and switch matches this file (30 of 30 live infrastructure links; the 8 ISP links are checked in Phase 5).

@@ -41,12 +41,13 @@ Follow [`phase0/phase0-feature-tests.md`](../phase0/phase0-feature-tests.md) bef
 
 **GUI:**
 
-1. Place every device from [cabling-plan.md §1](cabling-plan.md#1-devices-and-modules), adding modules and power supplies first (power off → add module → power on).
+1. Place every device from [cabling-plan.md §1](cabling-plan.md#1-devices-and-modules), adding modules and power supplies first (power off → add module → power on). On ISP-A, ISP-B and INET-CORE, replace the fiber modules in slots 4 and 5 with PT-ROUTER-NM-1CFE (matrix B-31).
 2. Set each device's display name to its hostname.
 3. Cable every link in [cabling-plan.md §2–3](cabling-plan.md#2-infrastructure-links). For the serial link, choose Serial DCE and click LON-WAN-01 first.
 4. Draw labelled boxes around each site and the internet (see [cabling-plan.md §4](cabling-plan.md#4-workspace-layout)).
+5. Power off the `Wireless0` port of every laptop, tablet and smartphone (Config tab → Wireless0 → Port Status). Until the SSIDs exist in Phase 8 they associate with any AP, including other sites' (matrix B-32).
 
-**Security licence** (needs a reload), on LON-EDGE-01, LON-EDGE-02 and IST-RTR-01:
+**Security licence** on LON-EDGE-01, LON-EDGE-02 and IST-RTR-01. In PT 9.0.1 a new ISR4331 already has `securityk9` as its current permanent package (matrix B-30), so check `show version` first; if it isn't listed, run:
 
 ```
 enable
@@ -86,6 +87,8 @@ reload
 
 4. After the reload `show version | include Version 15` must print `Version 15.0(2)SE4`. Move the cable to the next 2960 (`copy tftp:` again) and repeat.
 5. Delete `TMP-TFTP` and its cable when every 2960 is done.
+
+   Shortcut used in the Phase 2 build: before any config every London switch is in VLAN 1 and joined through the cores, so one temporary server on LON-ACC-01 Fa0/24 serves all five London 2960s at once (give each a different 192.168.99.x address, and wait about 30 s for spanning tree). LON-DMZ-SW01, INET-SW and LON-ROGUE-SW are isolated and each need their own temporary server.
 
 **Paste:** the `Phase 2: base` section on every router and switch that has one, and `Phase 2: base` on CHI-FW-01. The ISP routers are configured in Phase 5.
 
