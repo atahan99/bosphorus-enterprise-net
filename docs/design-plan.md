@@ -17,7 +17,7 @@ The project has to show that I can:
 |---|---|
 | London HQ, three remote sites, simulated internet with two ISPs | IPv6 dual-stack with OSPFv3 |
 | VLANs, 802.1Q, Rapid PVST+, LACP, L2 security | Remote-access VPN (Easy VPN) for a teleworker |
-| OSPF multi-area, EIGRP with redistribution, eBGP/iBGP | PT Network Controller + Python in PT |
+| OSPF multi-area, EIGRP with redistribution, eBGP | PT Network Controller + Python in PT |
 | HSRP, dual-ISP failover, backup VPN tunnel | Config linting and Batfish checks in GitHub Actions |
 | GRE over IPsec, ASA IPsec, PPP/CHAP | OT zone using PT 9 industrial devices |
 | Zone-based firewall, NAT/PAT, DMZ | |
@@ -93,8 +93,7 @@ See [cabling-plan.md §1](cabling-plan.md#1-devices-and-modules) for models and 
 - Root primary/secondary per VLAN matching HSRP: CORE-01 root for 10/30/60/70 (60 and 70 because the WLC hangs off CORE-01), CORE-02 root for 20/40/50/80.
 - Access ports: PortFast and BPDU guard.
 - Core ports facing access switches: **root guard**.
-- Access-switch uplinks (both of them, since either can become the blocked port after failover): **loop guard**, if Phase 0 confirms support. A blocked port that stops receiving BPDUs then goes loop-inconsistent instead of forwarding.
-- `errdisable recovery cause bpduguard` (if supported) so a port err-disabled by a rogue switch recovers once it's removed.
+- No loop guard and no automatic err-disable recovery: Packet Tracer has neither (matrix P0-02b/c, P0-03). A port err-disabled by BPDU guard is recovered with `shutdown` / `no shutdown` once the rogue switch is removed. Production would add both.
 
 **Access ports:** `switchport mode access`, `switchport nonegotiate`, voice VLAN on phone ports. Unused ports in VLAN 998 and shut down.
 
@@ -102,8 +101,8 @@ See [cabling-plan.md §1](cabling-plan.md#1-devices-and-modules) for models and 
 
 - **Port security:** maximum 3 MACs (PC + phone), sticky, violation `restrict`.
 - **DHCP snooping** on VLANs 10–70, uplinks trusted, and `no ip dhcp snooping information option`. Without that last line, the access switch inserts option 82 and the relay drops the requests: a classic gotcha worth a paragraph in the blog.
-- **DAI** on every user access switch for its user and voice VLANs, uplinks trusted (if Phase 0 confirms support). Static printers' ports are trusted and locked to one sticky MAC ([ADR 0012](adr/0012-static-printer-dai.md)); LON-SRV-SW01 (static servers and CME) doesn't run DAI and relies on port security.
-- **Wired 802.1X** is exercised in Phase 0 against LON-SRV-AAA-01. It is not applied to the main lab access ports; wireless 802.1X demonstrates RADIUS, while production would add wired 802.1X with MAB and a staged rollout.
+- **DAI** on every user access switch for its user and voice VLANs, uplinks trusted. Packet Tracer accepts the configuration (the 2960s must run IOS 15, matrix B-24) and shows DAI active, but does not drop invalid ARP (matrix P0-05a), so it is a documented control rather than a demonstrated one. Static printers' ports are trusted and locked to one sticky MAC ([ADR 0012](adr/0012-static-printer-dai.md)); LON-SRV-SW01 (static servers and CME) doesn't run DAI and relies on port security.
+- **Wired 802.1X** was exercised in Phase 0: the IOS 15 2960 accepts and enforces it, but Packet Tracer's PC never completes the EAP exchange (matrix P0-06). It is not applied to the main lab access ports; wireless 802.1X demonstrates RADIUS, while production would add wired 802.1X with MAB and a staged rollout.
 - **Rogue switch demo:** LON-ROGUE-SW is pre-configured with bridge priority 0 for VLAN 20 and left disconnected; it's cabled to LON-ACC-01 Fa0/24 (a spare desk port) only for tests T18–T19.
 
 **Branches** use a smaller version of the same idea ([ADR 0014](adr/0014-branch-switch-pairs.md)): two 3650s acting as collapsed core and access, joined by a two-link LACP bundle (Po1) that carries every VLAN plus a routed transit VLAN 900. Each switch has its own routed uplink to the branch router or firewall, half the desks and one AP. SW-01 is STP root and HSRP active for VLANs 10, 20, 60; SW-02 for 50 and 70.
@@ -116,8 +115,8 @@ Every site routes on L3 switch SVIs with HSRP. (Router-on-a-stick is still exerc
 
 ### HSRP
 
-- **London core and branch pairs:** version 2, preempt, MD5 authentication, group number = VLAN ID. Active switch priority 110, standby 100. Each core tracks its uplink to the edge router and decrements 20 if it goes down.
-- **DMZ:** LON-EDGE-01 and LON-EDGE-02 share 172.16.100.1 (group 100). EDGE-01 is active and tracks its ISP-A link, so inbound DMZ traffic follows the internet failover ([ADR 0011](adr/0011-stateless-inside-dmz.md) explains the consequence).
+- **London core and branch pairs:** version 2, preempt, group number = VLAN ID. Active switch priority 110, standby 100. Packet Tracer has no HSRP authentication or tracking (matrix P0-07): a switch that loses its uplink keeps its gateways and routes through its peer (OSPF in London, VLAN 900 at the branches). Production would add MD5 and uplink tracking.
+- **DMZ:** LON-EDGE-01 and LON-EDGE-02 share 172.16.100.1 (group 100), EDGE-01 active. Without tracking the DMZ gateway doesn't follow an ISP-A failure; it is moved by hand in test T04 ([ADR 0001](adr/0001-active-standby-internet-edge.md), [ADR 0011](adr/0011-stateless-inside-dmz.md)).
 
 ### OSPF (process 1)
 
@@ -136,12 +135,12 @@ Every site routes on L3 switch SVIs with HSRP. (Router-on-a-stick is still exerc
 
 ### EIGRP AS 100 (Toronto) and redistribution
 
-- TOR-RTR-01, TOR-SW-01/02 and LON-WAN-01's two serial interfaces run classic EIGRP, `no auto-summary`, MD5 via key chain (if supported). The two circuits load-share and back each other up.
-- The Toronto switches are **EIGRP stubs** (they only advertise their own subnets). TOR-RTR-01 **summarises** Toronto as 10.40.0.0/16 towards London on both circuits.
+- TOR-RTR-01, TOR-SW-01/02 and LON-WAN-01's two serial interfaces run classic EIGRP, `no auto-summary`, MD5 via key chain (verified in Phase 0). The two circuits load-share and back each other up.
+- The Toronto switches run EIGRP with `passive-interface default`, forming neighbors only on their uplink and VLAN 900 (Packet Tracer has no EIGRP stub, matrix B-03). TOR-RTR-01 **summarises** Toronto as 10.40.0.0/16 towards London on both circuits.
 - **One redistribution point: LON-WAN-01.**
   - EIGRP → OSPF: `redistribute eigrp 100 subnets` (Toronto appears in London as one O E2 route, 10.40.0.0/16).
-  - OSPF → EIGRP: `redistribute ospf 1 match internal external 1 external 2 metric 2000 2000 255 1 1500`. The seed metric is required (EIGRP can't use OSPF's cost); external routes are matched explicitly because London's default route is an OSPF external route.
-  - Route-maps tag each direction (100 and 110) and deny re-import of tagged routes, if Phase 0 confirms route tags work. With a single point, loops can't form, but the tags show the correct pattern for when a second point is added.
+  - OSPF → EIGRP: `redistribute ospf 1 metric 2000 2000 255 1 1500 match internal external 1 external 2`. The seed metric is required (EIGRP can't use OSPF's cost); external routes are matched explicitly because London's default route is an OSPF external route.
+  - No route tags: Packet Tracer has no route-maps (matrix P0-10). With a single point, loops can't form; production would tag each direction and deny re-import before adding a second point.
 
 ### BGP (London = AS 65100)
 
@@ -149,29 +148,27 @@ Every site routes on L3 switch SVIs with HSRP. (Router-on-a-stick is still exerc
 |---|---|
 | LON-EDGE-01 ↔ ISP-A (AS 65001) | eBGP |
 | LON-EDGE-02 ↔ ISP-B (AS 65002) | eBGP |
-| LON-EDGE-01 ↔ LON-EDGE-02 | iBGP between Loopback0s (`update-source`, `next-hop-self`), reachable via OSPF through the core |
 | ISP-A ↔ ISP-B ↔ INET-CORE (AS 65000) | Full mesh forming "the internet" |
 
-- **Advertise:** `network 203.0.113.0 mask 255.255.255.0`, anchored by a static route to Null0.
-- **Outbound filter:** prefix-list permitting only 203.0.113.0/24, so London never becomes a transit path between the ISPs.
-- **Receive:** ISPs send `default-originate` plus 192.0.2.0/24.
-- **Neighbor passwords** on eBGP sessions (if supported).
+Packet Tracer supports eBGP only: no iBGP, prefix-lists, route-maps, session passwords or `default-originate` (matrix P0-11). The edges therefore run no BGP between themselves, and the policy below uses only `network` statements.
+
+- **Advertise:** EDGE-01 announces `203.0.113.0/25` and `203.0.113.128/25`; EDGE-02 announces `203.0.113.0/24`. Each is anchored by a static route to Null0.
+- **Receive:** each ISP advertises `0.0.0.0/0` (static default to Null0 plus `network 0.0.0.0`) and the rest of the lab internet, including 192.0.2.0/24. Nothing is filtered.
+- **Transit:** London only ever announces its own block, so it can't become a transit path between the ISPs even without an outbound filter.
 
 ### Egress and ingress: the key design decision
 
-- **Outbound:** each edge runs `default-information originate` into OSPF (without `always`), EDGE-01 with metric 10 and EDGE-02 with metric 100, both E2. Everything inside prefers EDGE-01.
-- **Inbound:** EDGE-02 prepends its AS path twice towards ISP-B, so the internet prefers ISP-A.
+- **Outbound:** each edge runs `default-information originate` into OSPF (without `always`). Packet Tracer can't set its metric, so both are E2 metric 1. The EDGE-02 ↔ LON-CORE-02 link costs 1000, so EDGE-01 is the nearer ASBR and wins everywhere.
+- **Inbound:** longest match. The internet prefers EDGE-01's /25s via ISP-A over EDGE-02's /24 via ISP-B.
 - **Why active/standby rather than load-sharing:** each edge translates to its own PAT address. Traffic that left via EDGE-01 and returned via EDGE-02 would hit a router with no NAT entry and break.
-- **Failure behaviour:** if the ISP-A link or EDGE-01 fails, EDGE-01 loses its BGP default, stops originating the OSPF default and stops advertising the /24 to ISP-A. Both directions move to EDGE-02 together, and DMZ HSRP follows. Paths stay symmetric in every case.
-
-If prepending isn't supported, inbound engineering is documented as intent only; outbound failover still works purely through OSPF.
+- **Failure behaviour:** if the ISP-A link or EDGE-01 fails, EDGE-01 loses its BGP default, stops originating the OSPF default and its /25s are withdrawn. Both directions move to EDGE-02 together. The DMZ gateway (HSRP) can't track the ISP link in Packet Tracer, so it is moved by hand during the test. See [ADR 0001](adr/0001-active-standby-internet-edge.md).
 
 ## 8. WAN and VPN
 
 | Link | Design |
 |---|---|
-| **IST ↔ LON** | GRE over IPsec. GRE sourced from the public interfaces (EDGE-01 198.51.100.2, EDGE-02 198.51.100.6, IST 198.51.100.10). Crypto map on the physical outside interface matching `permit gre host X host Y`. IKEv1 PSK, AES-256; SHA-256 and DH group 14 if PT accepts them, otherwise the strongest it does (gap recorded). OSPF runs inside the tunnels, which is the reason for GRE. |
-| **CHI ↔ LON** | ASA crypto map ↔ IOS crypto map on LON-EDGE-02 (policy-based). Interesting traffic 10.30.0.0/16 ↔ 10.0.0.0/8. EDGE-02 has a static route for 10.30.0.0/16, tied to its ISP link (`track 2`), and redistributes only that route into OSPF (route-map, so the Null0 anchor for the public /24 isn't leaked). **Backup:** the ASA lists EDGE-01 as a second peer, and EDGE-01 has a floating static route (AD 250) that is only installed and advertised once EDGE-02's route is withdrawn. **NAT exemption on both ends** (deny line in the IOS NAT ACL, identity NAT on the ASA), otherwise traffic is PAT-translated before it reaches the crypto map. |
+| **IST ↔ LON** | GRE over IPsec. GRE sourced from the public interfaces (EDGE-01 198.51.100.2, EDGE-02 198.51.100.6, IST 198.51.100.10). Crypto map on the physical outside interface matching `permit gre host X host Y`. IKEv1 PSK, AES-256 with SHA-1 and DH group 5, ESP `esp-aes 256 esp-sha-hmac` in tunnel mode: the strongest Packet Tracer accepts (matrix P0-14; production would use SHA-256 and group 14+). OSPF runs inside the tunnels, which is the reason for GRE. |
+| **CHI ↔ LON** | ASA crypto map ↔ IOS crypto map on LON-EDGE-02 (policy-based). Interesting traffic 10.30.0.0/16 ↔ 10.0.0.0/8. EDGE-02 has a static route for 10.30.0.0/16 via ISP-B and redistributes its statics into OSPF (`redistribute static subnets`). Packet Tracer can't track the route or filter the redistribution, so the route only goes when the ISP-B link itself drops, and the Null0 anchors for the public block are exported too (harmless, see ADR 0001). **Backup:** the ASA lists EDGE-01 as a second peer, and EDGE-01 has a floating static route (AD 250) that is only installed and advertised once EDGE-02's route is withdrawn. **NAT exemption on both ends** (deny line in the IOS NAT ACL, identity NAT on the ASA), otherwise traffic is PAT-translated before it reaches the crypto map. |
 | **TOR ↔ LON** | Serial, `encapsulation ppp`, `ppp authentication chap`, per-peer `username` entries. LON-WAN-01 is DCE and sets `clock rate`. |
 
 Chicago keeps working if EDGE-02 or ISP-B's link to it fails (test T23). The ASA itself and Chicago's single ISP remain single points of failure (production: ASA HA pair, second ISP or LTE).
@@ -217,7 +214,7 @@ INSIDE ↔ DMZ is stateless because the DMZ gateway can move to EDGE-02 while in
 - `login block-for 120 attempts 3 within 60`, `exec-timeout 10 0`, MOTD banner.
 - `no ip http server`; `no cdp enable` on internet-facing interfaces.
 - Authenticated NTP from LON-SRV-OPS-01; Syslog to the same host with millisecond timestamps.
-- SNMP v2c read-only, restricted by ACL (production would use v3).
+- SNMP v2c read-only. Packet Tracer rejects an ACL on the community (matrix P0-16d), so management access is limited by the VTY `access-class` instead (production would use v3 with an ACL).
 - `copy running-config tftp` backups to LON-SRV-OPS-01.
 
 ## 11. Services
@@ -227,7 +224,7 @@ INSIDE ↔ DMZ is stateless because the DMZ gateway can move to EDGE-02 while in
 | DHCP | LON-SRV-CORE-01 | One pool per London VLAN via `ip helper-address 10.10.80.10` on the SVIs. AP pool sets **WLC Address** (option 43). Voice pool sets **TFTP** (option 150) to 10.10.50.10. Branches serve their own DHCP on the two site switches, with split scopes so either switch can serve alone (ADR 0009). |
 | Internal DNS | LON-SRV-CORE-01 | `corp.bosphorus.test` plus a few external records (PT DNS can't forward; documented) |
 | Public DNS | LON-DMZ-DNS-01, INET-DNS-01 | `www.bosphorus.test` → 203.0.113.10 |
-| AAA | LON-SRV-AAA-01 | TACACS+ for device logins and RADIUS for wireless. Wired 802.1X is a Phase 0 demonstration/production delta unless P0-06 is passed and access-port configuration is deliberately added. |
+| AAA | LON-SRV-AAA-01 | TACACS+ for device logins and RADIUS for wireless. Wired 802.1X stays a production delta: PT's PC never completes EAP (P0-06). |
 | Ops | LON-SRV-OPS-01 | Syslog, NTP, TFTP |
 | Intranet, mail | LON-SRV-INTRA-01 | HTTP intranet, email between a few PCs |
 
@@ -264,10 +261,10 @@ Every site has the same two SSIDs:
 | LON-CORE-01 down | HSRP, RPVST+, OSPF | CORE-02 takes all gateways; a few pings lost |
 | One Po1 member down (London or branch) | LACP | No loss |
 | London access uplink down | RPVST+ | Blocked uplink forwards |
-| ISP-A or LON-EDGE-01 down | BGP, iBGP default filtering, OSPF default withdrawal, DMZ HSRP | EDGE-01 cannot retain EDGE-02's default over iBGP; egress, ingress and DMZ all move to EDGE-02, preserving NAT symmetry |
+| ISP-A or LON-EDGE-01 down | eBGP session loss, OSPF default withdrawal, /25 withdrawal | Egress and ingress move to EDGE-02 together, preserving NAT symmetry; the DMZ gateway is moved by hand (no HSRP tracking in PT) |
 | Tunnel0 down | OSPF over Tunnel1 | Istanbul reconverges via EDGE-02 |
 | One branch switch down | HSRP, the other switch's uplink, split DHCP | Only that switch's desks and AP are lost; gateways, DHCP and the WAN keep working |
-| One branch switch's uplink down | HSRP tracking, routing via VLAN 900 | Its gateways move to the other switch; traffic leaves through the other uplink |
+| One branch switch's uplink down | Routing via VLAN 900 | It keeps its gateways (no HSRP tracking in PT) and forwards over VLAN 900; traffic leaves through the other uplink |
 | One Toronto circuit down | EIGRP | All traffic on the remaining circuit |
 | LON-EDGE-02 or its ISP-B link down | Tracked static, floating static, ASA backup peer | Chicago's VPN moves to EDGE-01 |
 | LON-WAN-01 down | — | **Accepted SPOF** for Toronto (fix: terminate the second circuit on a second London router) |
@@ -302,7 +299,7 @@ Full procedures are in [test-plan.md](test-plan.md). Each test is recorded with 
 | T01 | Inter-VLAN and inter-site policy matrix: every cell in §10 checked with ping or HTTP, with ACL hit counters on the London cores and branch switches |
 | T02 | Power off LON-CORE-01 during a continuous ping; HSRP and STP take over; count lost pings |
 | T03 | Shut one Po1 member; zero loss |
-| T04 | Shut the ISP-A link: BGP neighbor down, default moves, PAT uses 203.0.113.2, DMZ HSRP moves, www still reachable |
+| T04 | Shut the ISP-A link: BGP neighbor down, default moves, PAT uses 203.0.113.2, /25s withdrawn; after moving DMZ HSRP by hand, www still reachable |
 | T05 | Shut Tunnel0; Istanbul routes move to Tunnel1 (route table and traceroute before/after) |
 | T06 | Chicago VPN: ISAKMP and IPsec SAs up, counters increasing, ASA shows the tunnel |
 | T07 | Wrong CHAP password on TOR-RTR-01: link stays down |
@@ -318,12 +315,12 @@ Full procedures are in [test-plan.md](test-plan.md). Each test is recorded with 
 | T17 | LON-DMZ-WEB-01 tries to reach the internal network: blocked |
 | T18 | Cable LON-ROGUE-SW to LON-ACC-01 Fa0/24: BPDU guard err-disables the port, root unchanged, `%SPANTREE-2-BLOCK_BPDUGUARD` in Syslog |
 | T19 | Same, with BPDU guard temporarily removed on that port: root guard on the core blocks the superior BPDUs, root still unchanged |
-| T20 | Loop guard (if supported): simulate a unidirectional failure on a blocked uplink; port goes loop-inconsistent instead of forwarding |
+| T20 | Loop guard: not run, Packet Tracer has no loop guard (matrix P0-02b); kept as the production control |
 | T21 | Power off a branch switch: the other switch keeps gateways, DHCP and the WAN up for its half of the office |
 | T22 | Shut one Toronto circuit: EIGRP moves all traffic to the other, calls and pings continue |
 | T23 | Shut LON-EDGE-02's ISP-B link: Chicago's VPN re-establishes to EDGE-01 and London routes Chicago traffic there |
-| T24 | Static host without a DHCP snooping binding: DAI drops its ARP while a DHCP client still works |
-| T25 | BGP filters: only 203.0.113.0/24 exported; partner-edge default rejected over iBGP |
+| T24 | DAI shows active with counters on the access switches (PT does not drop invalid ARP, matrix P0-05a) |
+| T25 | BGP advertisements: EDGE-01 exports only the two /25s, EDGE-02 only the /24; the internet prefers the /25s |
 | T26 | Congest one Toronto circuit during a call: drops fall in class-default, voice class is protected (demonstration, not measurement) |
 
 Simulation-mode captures (ZBF drop, IPsec encapsulation, HSRP hellos) go in the blog.

@@ -29,12 +29,12 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 | T17 | Compromised DMZ host can't reach inside | |
 | T18 | Rogue switch: BPDU guard | |
 | T19 | Rogue switch: root guard as the second layer | |
-| T20 | Loop guard on a blocked uplink | |
+| T20 | Loop guard on a blocked uplink | n/a (not in PT, matrix P0-02b) |
 | T21 | Branch switch failure | |
 | T22 | Toronto circuit failure | |
 | T23 | Chicago backup VPN | |
-| T24 | Dynamic ARP Inspection blocks an unbound static host | |
-| T25 | BGP export and iBGP default filters | |
+| T24 | Dynamic ARP Inspection active on the access switches | |
+| T25 | BGP advertisements and inbound preference | |
 | T26 | QoS under congestion on a Toronto circuit | |
 
 ---
@@ -136,7 +136,7 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 ## T04: ISP-A failure
 
-**Purpose:** the key design test. Outbound, inbound and DMZ traffic all move to LON-EDGE-02 together, and stay symmetric.
+**Purpose:** the key design test. Outbound and inbound traffic move to LON-EDGE-02 together and stay symmetric ([ADR 0001](adr/0001-active-standby-internet-edge.md)). The DMZ gateway has to be moved by hand because Packet Tracer has no HSRP tracking.
 
 **Before:** capture these on the normal network:
 
@@ -151,16 +151,20 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 | Check | Where | Expected |
 |---|---|---|
-| `show ip bgp summary` | EDGE-01 | ISP-A neighbor down; iBGP still up |
-| `show ip route 0.0.0.0` | EDGE-01 | No default route; EDGE-02's default is rejected by `PL-IBGP-IN` |
-| `show ip route 0.0.0.0` | CORE-01 | O*E2 via EDGE-02, metric 100 |
+| `show ip bgp summary` | EDGE-01 | ISP-A neighbor down |
+| `show ip route 0.0.0.0` | EDGE-01 | O*E2 via the core (EDGE-02's default); EDGE-01 no longer originates one |
+| `show ip route 0.0.0.0` | CORE-01 | O*E2 via EDGE-02 |
 | Browse www.example.test, then `show ip nat translations` | LON-PC-ENG-01, then EDGE-02 | Works; translated to **203.0.113.2** |
-| `show standby brief` | EDGE-02 | DMZ group 100 **Active** |
-| `show ip bgp 203.0.113.0` | INET-CORE | Only path via ISP-B |
-| Browse http://203.0.113.10 | INET-HOST-01 | Public site still loads |
+| `show ip bgp` | INET-CORE | The two /25s are gone; only 203.0.113.0/24 via ISP-B remains |
 | `show ip ospf neighbor` | IST-RTR-01 | Tunnel0 neighbor gone after the dead timer, Tunnel1 FULL |
+| On EDGE-01 `interface GigabitEthernet0/0/2` → `standby 100 priority 90`, then `show standby brief` on EDGE-02 | EDGE-01, EDGE-02 | DMZ group 100 **Active** on EDGE-02 |
+| Browse http://203.0.113.10 | INET-HOST-01 | Public site still loads |
 
-**Restore:** `no shutdown` on ISP-A Fa0/0. Everything returns to EDGE-01 (DMZ HSRP preempts, OSPF default via EDGE-01 again).
+Before the priority change, check that browsing 203.0.113.10 from INET-HOST-01 **fails** and record it: this is the gap left by the missing HSRP tracking.
+
+**Restore:** `no shutdown` on ISP-A Fa0/0 and `standby 100 priority 110` on EDGE-01 Gi0/0/2. Everything returns to EDGE-01 (DMZ HSRP preempts, OSPF default via EDGE-01 again, /25s re-advertised).
+
+**Also check (matrix B-25):** before the failure, `show ip route 0.0.0.0` on LON-CORE-02 must point at EDGE-01 through CORE-01, not at EDGE-02. That proves the cost-1000 tie-break works for equal E2 defaults.
 
 **Evidence:** `T04-before-*.png`, `T04-after-*.png`. **Actual:**
 
@@ -328,9 +332,9 @@ On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zo
 
 **Procedure:** cable LON-ROGUE-SW Gi0/1 → LON-ACC-01 Fa0/24 (copper cross-over).
 
-**Expected:** Fa0/24 goes err-disabled immediately (`show interfaces status err-disabled`); `%SPANTREE-2-BLOCK_BPDUGUARD` appears in the log and on the syslog server; the root bridge is unchanged for every VLAN. With errdisable recovery configured, the port retries after 60 s and is disabled again while the rogue switch is attached.
+**Expected:** Fa0/24 goes err-disabled immediately (`show interfaces status err-disabled`); `%SPANTREE-2-BLOCK_BPDUGUARD` appears in the log and on the syslog server; the root bridge is unchanged for every VLAN. The port stays err-disabled: Packet Tracer has no errdisable recovery (matrix P0-03).
 
-**Restore:** remove the cable; the port recovers within 60 s (or `shutdown` / `no shutdown`).
+**Restore:** remove the cable, then `shutdown` / `no shutdown` on Fa0/24.
 
 **Evidence:** `T18-err-disabled.png`, `T18-syslog.png`, `T18-root-unchanged.png`. **Actual:**
 
@@ -345,9 +349,9 @@ On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zo
 1. On LON-ACC-01: `interface FastEthernet0/24` → `no spanning-tree bpduguard enable` → `no spanning-tree portfast`.
 2. Cable LON-ROGUE-SW as in T18 and wait for STP to converge.
 
-**Expected:** LON-ACC-01 accepts the rogue as root for VLAN 20 and sends superior BPDUs upstream, but the cores' root guard blocks them: `show spanning-tree inconsistentports` on LON-CORE-01 and LON-CORE-02 lists Gi1/0/1 as **Root Inconsistent** for VLAN 20. The cores stay root; the rogue only affects its own corner of the network.
+**Expected:** LON-ACC-01 accepts the rogue as root for VLAN 20 and sends superior BPDUs upstream, but the cores' root guard rejects them: both cores log `%SPANTREE-2-ROOTGUARDBLOCK` for Gi1/0/1 and `show spanning-tree vlan 20` shows it **BLK**. The cores stay root. Record whether traffic still crosses that port: in Phase 0 PT blocked the port in STP only, not on the data plane (matrix P0-02a), so a pass is judged on the STP state and log.
 
-**Restore:** remove the cable, re-enable `spanning-tree portfast` and `spanning-tree bpduguard enable` on Fa0/24.
+**Restore:** remove the cable, re-enable `spanning-tree portfast` and `spanning-tree bpduguard enable` on Fa0/24. Then `shutdown` / `no shutdown` Gi1/0/1 on both cores: PT's root-guard block does not clear by itself.
 
 **Evidence:** `T19-root-inconsistent-core01.png`. **Actual:**
 
@@ -355,19 +359,7 @@ On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zo
 
 ## T20: Loop guard
 
-**Purpose:** a blocked uplink that stops receiving BPDUs (as with a one-way link failure) must not start forwarding.
-
-**Procedure:**
-
-1. On LON-ACC-01, confirm `show spanning-tree vlan 10` shows Gi0/2 (to CORE-02) as **alternate/blocking** (VLAN 10's root is CORE-01).
-2. Simulate the failure: on LON-CORE-02 `interface GigabitEthernet1/0/1` → `spanning-tree bpdufilter enable`. CORE-02 stops sending BPDUs on that link, but the link stays up.
-3. Wait for the max-age timer (Fast Forward Time).
-
-**Expected:** on LON-ACC-01, `show spanning-tree inconsistentports` shows Gi0/2 **Loop Inconsistent** instead of moving to forwarding.
-
-**Restore:** `no spanning-tree bpdufilter enable` on CORE-02 Gi1/0/1; the port recovers automatically.
-
-**Evidence:** `T20-loop-inconsistent.png`. **Actual:**
+**Not run.** Packet Tracer rejects `spanning-tree guard loop` and `spanning-tree loopguard default` on both the 2960 (IOS 15) and the 3650 (matrix P0-02b/c), so the access uplinks have no loop guard. The test is kept as a record of the production control: a blocked uplink that stops receiving BPDUs (a one-way link failure) should go loop-inconsistent instead of forwarding.
 
 ---
 
@@ -405,9 +397,9 @@ On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zo
 
 | Check | Where | Expected |
 |---|---|---|
-| `show ip route 10.30.0.0` | LON-EDGE-02 | Tracked static gone |
+| `show ip route 10.30.0.0` | LON-EDGE-02 | Static gone (its next hop is unreachable once the link is down) |
 | `show ip route 10.30.0.0` | LON-EDGE-01 | Floating static (AD 250) now installed |
-| `show ip route 10.30.0.0` | LON-CORE-01 | O E2 via EDGE-01, metric 200 |
+| `show ip route 10.30.0.0` | LON-CORE-01 | O E2 via EDGE-01, metric 20 |
 | `show crypto isakmp sa` | CHI-FW-01 | SA with 198.51.100.2 |
 | Ping 10.10.80.10 | CHI-PC-01 | Works |
 
@@ -419,34 +411,31 @@ On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zo
 
 ## T24: Dynamic ARP Inspection
 
-**Purpose:** prove that DAI does more than appear in the running configuration.
+**Purpose:** show DAI is configured and inspecting, and record how far Packet Tracer enforces it.
 
-**Procedure:** connect TEST-PC to an unused, untrusted VLAN 20 access port on LON-ACC-01. Give it a static address of `10.10.20.240/24`, gateway `10.10.20.1`, and try to ping the gateway. Then inspect `show ip arp inspection statistics` and `show ip arp inspection log` on LON-ACC-01.
+**Procedure:** connect TEST-PC to an unused, untrusted VLAN 20 access port on LON-ACC-01. Give it a static address of `10.10.20.240/24`, gateway `10.10.20.1`, and try to ping the gateway. Then inspect `show ip arp inspection vlan 20` and `show ip arp inspection statistics` on LON-ACC-01.
 
-**Expected:** the static host has no DHCP snooping binding, so its ARP is dropped and the ping fails; the DAI drop counter increases. A normal DHCP client on the same VLAN still works.
+**Expected:** VLAN 20 shows DAI **Enabled / Active** and the forwarded counter increases. In Phase 0 PT did not drop ARP from a host without a binding (matrix P0-05a), so the ping is expected to **succeed**; record it as ⚠️ with that note. A drop would be a better-than-expected result. A normal DHCP client on the same VLAN works either way.
 
 **Restore:** disconnect TEST-PC and return the port to its documented test/spare state.
 
-**Evidence:** `T24-dai-drop.png`, `T24-dhcp-client-works.png`. **Actual:**
+**Evidence:** `T24-dai-active.png`, `T24-dhcp-client-works.png`. **Actual:**
 
 ---
 
-## T25: BGP filters
+## T25: BGP advertisements
 
-**Purpose:** prove that the enterprise cannot become internet transit and that an edge cannot retain its partner's default route over iBGP.
+**Purpose:** prove that London only announces its own block, and that the internet prefers ISP-A without AS-path prepending ([ADR 0001](adr/0001-active-standby-internet-edge.md)).
 
 **Procedure:**
 
-1. On both London edges, inspect `show ip bgp neighbors <ISP-address> advertised-routes`; only `203.0.113.0/24` should be exported.
-2. On EDGE-01, temporarily add `ip route 10.10.0.0 255.255.0.0 Null0`, then add `network 10.10.0.0 mask 255.255.0.0` under BGP. Recheck advertised routes toward ISP-A.
-3. Remove that temporary BGP `network` statement and Null0 route.
-4. Repeat the ISP-A outage from T04 and inspect `show ip route 0.0.0.0` and `show ip bgp 0.0.0.0` on EDGE-01.
+1. On ISP-A and ISP-B, `show ip bgp` and check what each learned from its London neighbor.
+2. On INET-CORE, `show ip bgp` and `show ip route 203.0.113.10`.
+3. On both London edges, `show ip bgp` and check that each received `0.0.0.0/0` from its ISP.
 
-**Expected:** the private aggregate is never advertised because `PL-BGP-OUT` permits only `203.0.113.0/24`. During the outage, EDGE-01 has no default learned over iBGP because `PL-IBGP-IN` rejects it; EDGE-02 alone originates the enterprise default.
+**Expected:** ISP-A learns only `203.0.113.0/25` and `203.0.113.128/25` from EDGE-01; ISP-B learns only `203.0.113.0/24` from EDGE-02. INET-CORE reaches 203.0.113.10 through ISP-A (longest match on the /25). No private prefix is ever announced, because the edges have `network` statements only for the public block (PT has no outbound prefix-list, matrix P0-11c).
 
-**Restore:** ensure ISP-A Fa0/0 is up and both temporary statements—`network 10.10.0.0 mask 255.255.0.0` and `ip route 10.10.0.0 255.255.0.0 Null0`—are absent.
-
-**Evidence:** `T25-export-filter.png`, `T25-ibgp-default-filter.png`. **Actual:**
+**Evidence:** `T25-isp-a-learned.png`, `T25-inet-core-route.png`. **Actual:**
 
 ---
 

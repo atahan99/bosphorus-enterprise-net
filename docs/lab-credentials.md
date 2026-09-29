@@ -15,8 +15,8 @@ Every secret in this lab, in one place. **These are lab-only values**, published
 | WLC admin | `wlcadmin` / `Lab-Wlc-1` | LON-WLC-01 web GUI |
 | OSPF MD5 key 1 | `Lab-Ospf-1` | All OSPF interfaces |
 | EIGRP key chain | `Lab-Eigrp-1` | LON-WAN-01 ↔ TOR-RTR-01 ↔ TOR-SW-01/02 |
-| BGP neighbor password | `Lab-Bgp-1` | London edges ↔ ISPs |
-| HSRP MD5 | `Lab-Hsrp-1` | Core SVIs, DMZ |
+| BGP neighbor password | `Lab-Bgp-1` | Not configured: Packet Tracer has no BGP session passwords (matrix P0-11f) |
+| HSRP MD5 | `Lab-Hsrp-1` | Not configured: Packet Tracer has no HSRP authentication (matrix P0-07a) |
 | PPP CHAP | `Lab-Chap-1` | LON-WAN-01 ↔ TOR-RTR-01 (both circuits) |
 | IKE PSK (Istanbul) | `Lab-Ike-1` | London edges ↔ IST-RTR-01 |
 | IKE PSK (Chicago) | `Lab-Ike-2` | LON-EDGE-02 ↔ CHI-FW-01 |

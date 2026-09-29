@@ -57,6 +57,36 @@ write memory
 reload
 ```
 
+**IOS 15 on every 2960-24TT** (LON-ACC-01 … 04, LON-SRV-SW01, LON-DMZ-SW01, LON-ROGUE-SW, INET-SW). A new 2960 boots 12.2(25)FX, which rejects the DAI lines in the Phase 3 configs ([matrix](pt-support-matrix.md) B-24). Do this before pasting any config:
+
+1. Place a temporary **Server-PT** named `TMP-TFTP`, static `192.168.99.1/24`. Its TFTP service is on by default and holds the image.
+2. Cable `TMP-TFTP` FastEthernet0 to the switch's **Fa0/24** (straight-through).
+3. On the switch:
+
+   ```
+   enable
+   configure terminal
+   interface Vlan1
+    ip address 192.168.99.2 255.255.255.0
+    no shutdown
+   end
+   copy tftp: flash:
+   192.168.99.1
+   c2960-lanbasek9-mz.150-2.SE4.bin
+   c2960-lanbasek9-mz.150-2.SE4.bin
+   configure terminal
+   boot system flash:c2960-lanbasek9-mz.150-2.SE4.bin
+   interface Vlan1
+    no ip address
+    shutdown
+   end
+   write memory
+   reload
+   ```
+
+4. After the reload `show version | include Version 15` must print `Version 15.0(2)SE4`. Move the cable to the next 2960 (`copy tftp:` again) and repeat.
+5. Delete `TMP-TFTP` and its cable when every 2960 is done.
+
 **Paste:** the `Phase 2: base` section on every router and switch that has one, and `Phase 2: base` on CHI-FW-01. The ISP routers are configured in Phase 5.
 
 **Verify:**
@@ -64,6 +94,7 @@ reload
 | Command | Where | Expected |
 |---|---|---|
 | `show version \| include securityk9` | EDGE-01/02, IST | securityk9 listed as the current licence |
+| `show version \| include Version 15` | Every 2960-24TT | `Version 15.0(2)SE4` |
 | `show cdp neighbors` | Any router or switch | Neighbors and ports match cabling-plan.md |
 
 **Screenshots:** `phase2-topology-full.png` (whole workspace, zoomed to fit).
@@ -87,7 +118,7 @@ Paste the two cores first, then the access switches.
 | `show spanning-tree vlan 10` | LON-ACC-01 | Gi0/1 root port, Gi0/2 **alternate (blocked)** |
 | `show spanning-tree vlan 20` | LON-ACC-01 | Gi0/2 root port, Gi0/1 alternate |
 | `show interfaces status` | LON-ACC-01 … 04 | Desk ports in their VLAN (connected only where a device is placed), spare ports disabled |
-| `show spanning-tree summary` | Access switches | Loop guard enabled on uplinks (or default) |
+| `show ip arp inspection vlan 20` | Access switches | DAI Enabled / Active on the user and voice VLANs (IOS 15 required) |
 | `show port-security` | Access switches | Access ports listed |
 | `show ip dhcp snooping` | Access switches | Enabled on the listed VLANs, uplinks trusted |
 
@@ -130,9 +161,9 @@ Inter-VLAN ACLs aren't applied until Phase 7, so at this point every London VLAN
 
 | Command / action | Where | Expected |
 |---|---|---|
-| `show ip bgp summary` | EDGE-01 | ISP-A and 10.255.255.2 (iBGP) established, prefixes received |
-| `show ip bgp` | INET-CORE | 203.0.113.0/24 best path via ISP-A (`65001 65100`); via ISP-B shows `65002 65100 65100 65100` |
-| `show ip route 0.0.0.0` | CORE-01 and CORE-02 | O*E2 via LON-EDGE-01 path, metric 10 |
+| `show ip bgp summary` | EDGE-01, EDGE-02 | Their ISP neighbor established, prefixes received (including 0.0.0.0/0) |
+| `show ip bgp` | INET-CORE | 203.0.113.0/25 and 203.0.113.128/25 via ISP-A (`65001 65100`); 203.0.113.0/24 via ISP-B (`65002 65100`) |
+| `show ip route 0.0.0.0` | CORE-01 and CORE-02 | O*E2 towards LON-EDGE-01 (CORE-02 via CORE-01, not via the cost-1000 link to EDGE-02) |
 | `show standby brief` | EDGE-01 | DMZ group 100 Active |
 | Browse `http://www.example.test` | LON-PC-ENG-01 | Internet page loads |
 | `show ip nat translations` | EDGE-01 | PC's address translated to 203.0.113.1 |
@@ -173,11 +204,11 @@ Inter-VLAN ACLs aren't applied until Phase 7, so at this point every London VLAN
 | `show interfaces serial0/0/0` and `serial0/0/1` | TOR-RTR-01 | Both up/up, `LCP Open` |
 | `show ip eigrp neighbors` | TOR-RTR-01 | LON-WAN-01 twice (10.255.2.1 and .5) and both Toronto switches |
 | `show ip route` | TOR-SW-01 | `D*EX 0.0.0.0/0` and London routes as `D EX` |
-| `show ip route 10.40.0.0` | LON-CORE-01 | `O E2 10.40.0.0/16` (the Toronto summary), tag 100 |
+| `show ip route 10.40.0.0` | LON-CORE-01 | `O E2 10.40.0.0/16` (the Toronto summary; no route tag, PT has no route-maps) |
 | Browse `http://www.example.test` | TOR-PC-01 | Works (via London's internet edge) |
 | Browse `http://www.example.test` | IST-PC-01, CHI-PC-01 | Works (local breakout) |
 
-**Screenshots:** `phase6-branch-hsrp.png`, `phase6-ist-crypto-sa.png`, `phase6-ist-ospf-routes.png`, `phase6-asa-vpn.png`, `phase6-tor-eigrp-neighbors.png`, `phase6-core-route-tags.png`.
+**Screenshots:** `phase6-branch-hsrp.png`, `phase6-ist-crypto-sa.png`, `phase6-ist-ospf-routes.png`, `phase6-asa-vpn.png`, `phase6-tor-eigrp-neighbors.png`, `phase6-core-toronto-route.png`.
 
 ---
 

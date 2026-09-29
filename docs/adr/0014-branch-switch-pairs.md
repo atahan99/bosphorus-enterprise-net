@@ -11,10 +11,10 @@ Branches have 30–36 staff. The first design used a single router or L3 core sw
 Every branch uses **two 3650-24PS switches acting as collapsed core and access**:
 
 - Joined by a two-link LACP bundle (Po1) carrying all VLANs and a routed transit VLAN 900.
-- HSRP for every gateway VLAN (SW-01 active for 10, 20, 60; SW-02 for 50, 70), with each switch tracking its uplink.
+- HSRP for every gateway VLAN (SW-01 active for 10, 20, 60; SW-02 for 50, 70). Packet Tracer has no HSRP tracking, so a switch that loses its uplink keeps its gateways and forwards over VLAN 900 to its peer.
 - Each switch has its **own routed uplink** to the branch router (Istanbul, Toronto) or firewall (Chicago), so the WAN survives the loss of either switch.
 - Desks, APs and DHCP scopes are split across the pair.
-- Istanbul runs OSPF area 1 between the router and both switches; Toronto runs EIGRP with the switches as stubs; Chicago uses static routes with floating backups.
+- Istanbul runs OSPF area 1 between the router and both switches; Toronto runs EIGRP (no stubs: Packet Tracer lacks `eigrp stub`, so `passive-interface default` limits neighbors to the uplink and VLAN 900); Chicago uses static routes with floating backups.
 
 ## Alternatives considered
 

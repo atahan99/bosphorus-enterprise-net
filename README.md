@@ -17,7 +17,7 @@ The scenario is fictional. Every design choice (which routing protocol runs wher
                  /        \               /        \
           eBGP  /     IST WAN        eBGP /     CHI WAN
                |          |              |          |
-        [LON-EDGE-01]==iBGP==[LON-EDGE-02]      [CHI-FW-01 ASA]
+        [LON-EDGE-01]        [LON-EDGE-02]      [CHI-FW-01 ASA]
            |    \   DMZ (HSRP)   /   |             /     \
            |     [LON-DMZ-SW01]      |      [CHI-SW-01]=[CHI-SW-02]
            |      WEB   DNS          |
@@ -37,7 +37,7 @@ Overlays:  GRE/IPsec Tunnel0  LON-EDGE-01 <-> IST  (primary)
 
 | Site | Staff | Role | WAN | Routing |
 |---|---|---|---|---|
-| **London (LON)** | 80 | HQ: redundant core, 4 access switches, servers, DMZ, Wi-Fi, voice, internet edge | ISP-A primary, ISP-B backup | OSPF area 0, eBGP/iBGP |
+| **London (LON)** | 80 | HQ: redundant core, 4 access switches, servers, DMZ, Wi-Fi, voice, internet edge | ISP-A primary, ISP-B backup | OSPF area 0, eBGP |
 | **Istanbul (IST)** | 30 | Regional office, redundant switch pair | ISP-A + GRE over IPsec to both London edges | OSPF area 1 |
 | **Chicago (CHI)** | 36 | Office behind an ASA, redundant switch pair | ISP-B + ASA IPsec (primary EDGE-02, backup EDGE-01) | Static |
 | **Toronto (TOR)** | 36 | Acquired site on a legacy design, redundant switch pair | Two private serial circuits to HQ, no local internet | EIGRP AS 100, redistributed at HQ |
@@ -49,8 +49,8 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | Area | Features |
 |---|---|
 | Switching | VLANs, 802.1Q trunks (native VLAN 999, DTP off), VTP transparent, Rapid PVST+ with per-VLAN root placement, LACP EtherChannel |
-| L2 security | PortFast + BPDU guard, root guard, loop guard, port security, DHCP snooping, DAI, rogue-switch attack demo |
-| Routing | Inter-VLAN routing on L3 switch SVIs, OSPF multi-area with MD5 and summarisation, EIGRP, tagged redistribution, eBGP/iBGP with prefix filtering and AS-path prepending |
+| L2 security | PortFast + BPDU guard, root guard, port security, DHCP snooping, DAI (configured; PT doesn't enforce it), rogue-switch attack demo |
+| Routing | Inter-VLAN routing on L3 switch SVIs, OSPF multi-area with MD5 and summarisation, EIGRP, single-point redistribution, eBGP with longest-match inbound engineering (PT has no iBGP, prefix-lists or route-maps) |
 | Redundancy | HSRP at every site, redundant switch pairs at the branches, dual ISP failover with symmetric NAT, backup VPN tunnel and backup VPN peer, dual Toronto circuits |
 | WAN / VPN | GRE over IPsec, ASA-to-IOS policy-based IPsec, PPP with CHAP |
 | Edge security | Zone-based firewall, PAT and static NAT, DMZ |

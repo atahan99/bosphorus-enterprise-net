@@ -44,7 +44,7 @@ Paste config in **global configuration mode** (`enable` → `configure terminal`
 | R3 | Router-PT | None |
 | R4 | ISR2911 | None |
 | SW1 | 3650-24PS | Add AC-POWER-SUPPLY |
-| SW2 | 2960-24TT | None |
+| SW2 | 2960-24TT | Upgrade to IOS 15.0(2)SE4 (below). The default 12.2(25)FX image has no DAI or 802.1X |
 | PC1, PC2 | PC-PT | None |
 | SRV1 | Server-PT | None |
 
@@ -111,12 +111,32 @@ R4 (ISR2911):
 enable
 configure terminal
 license boot module c2900 technology-package securityk9
+yes
 end
 write memory
 reload
 ```
 
-Check after reload: `show version` lists `securityk9` as active. **→ P0-01**
+The 2911 prints a licence agreement and waits at `ACCEPT? [yes/no]:`; the `yes` line answers it. Without it the command looks accepted but no `license boot module` line is saved. Check after reload: `show license feature` shows `securityk9` with `Enabled yes`. **→ P0-01**
+
+### Step 0b: IOS 15 on SW2
+
+After the hosts and SW2's Vlan20 are configured (so SW2 can reach SRV1, whose TFTP service is on by default):
+
+```
+enable
+copy tftp: flash:
+10.10.20.10
+c2960-lanbasek9-mz.150-2.SE4.bin
+c2960-lanbasek9-mz.150-2.SE4.bin
+configure terminal
+boot system flash:c2960-lanbasek9-mz.150-2.SE4.bin
+end
+write memory
+reload
+```
+
+Check after reload: `show version` reports `Version 15.0(2)SE4` (image `C2960-LANBASEK9-M`).
 
 ### R1
 
@@ -194,6 +214,8 @@ interface Loopback1
 hostname SW1
 no ip domain-lookup
 ip routing
+spanning-tree mode rapid-pvst
+spanning-tree vlan 1,20 priority 4096
 vlan 20
  name ENG
 interface GigabitEthernet1/0/24
@@ -224,6 +246,7 @@ If `switchport trunk encapsulation dot1q` is rejected, skip it (the 3650 may onl
 ```
 hostname SW2
 no ip domain-lookup
+spanning-tree mode rapid-pvst
 vlan 20
  name ENG
 interface GigabitEthernet0/1
@@ -350,7 +373,9 @@ radius server SRV1
 
 SW2's console now asks for a login: `admin` / `Lab-Admin-1`.
 
-PC1 → Config → FastEthernet0 → 802.1X: enable, method MD5, user `dot1x-user`, password `Lab-User-1`.
+PC1 → Desktop → IP Configuration → 802.1X section at the bottom: tick **Use 802.1X Security**, Authentication **MD5**, user `dot1x-user`, password `Lab-User-1`. (It is not on the Config tab.)
+
+In the 2026-09-29 run the switch side enforced (unauthorised port, DHCP dropped) but PC-PT never sent EAPOL, so the successful-login check could not pass; see the matrix.
 
 **Pass:** PC1 is blocked before authenticating and gets DHCP after; `show dot1x all` (or `show authentication sessions`) shows the port authorised. With a wrong password, the port stays unauthorised.
 
@@ -731,7 +756,13 @@ tacacs server SRV1
 
 **Pass:** every line accepted (R4 can't actually reach the server; this test only checks syntax). Record any rejected line.
 
-From now on R4's console asks for a login. The TACACS+ server is unreachable, so it falls back to the local user: `admin` / `Lab-Admin-1`. That fallback working is itself worth noting in the matrix.
+From now on R4's console asks for a login. While the TACACS+ server is unreachable it falls back to the local user: `admin` / `Lab-Admin-1`. Once SRV1's AAA service is on (P0-06) the server answers with a reject instead, and IOS does **not** fall back, so the console locks you out. Add a console-only local list straight away:
+
+```
+aaa authentication login CONSOLE local
+line con 0
+ login authentication CONSOLE
+```
 
 ## 6. QoS test
 

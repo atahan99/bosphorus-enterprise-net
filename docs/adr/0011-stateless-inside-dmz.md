@@ -4,7 +4,7 @@
 
 ## Context
 
-The DMZ gateway is an HSRP address shared by both edges, and it tracks the ISP-A link so that inbound internet traffic to the DMZ keeps working when ISP-A fails (ADR 0001). In that state the DMZ servers send replies to EDGE-02, while internal users' requests to the DMZ may still reach them through EDGE-01. A stateful firewall on EDGE-02 would see the replies without the session and drop them.
+The DMZ gateway is an HSRP address shared by both edges. After an ISP-A failure it moves to EDGE-02 so that inbound internet traffic to the DMZ keeps working (ADR 0001). The design had HSRP track the ISP-A link; Packet Tracer has no HSRP tracking, so the move is made by hand (test T04), but the resulting state is the same. In that state the DMZ servers send replies to EDGE-02, while internal users' requests to the DMZ may still reach them through EDGE-01. A stateful firewall on EDGE-02 would see the replies without the session and drop them.
 
 ## Decision
 
@@ -18,7 +18,7 @@ OUTSIDE ↔ DMZ and INSIDE → OUTSIDE stay fully stateful (`inspect`), because 
 ## Alternatives considered
 
 - **Inspect in both directions:** breaks internal access to the DMZ during a single-ISP failure.
-- **Don't track the ISP link in DMZ HSRP:** keeps internal access symmetric but breaks inbound internet access to the DMZ when only ISP-A fails.
+- **Leave the DMZ gateway on EDGE-01 after an ISP-A failure:** keeps internal access symmetric but breaks inbound internet access to the DMZ when only ISP-A fails.
 - **Firewall state sync between edges:** not available on ISR routers.
 
 ## Consequences

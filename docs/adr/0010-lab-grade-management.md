@@ -8,7 +8,7 @@ Management-plane hardening is part of the design, but Packet Tracer limits what 
 
 ## Decision
 
-- **SNMP v2c**, read-only, restricted by ACL to the MGMT subnet.
+- **SNMP v2c**, read-only. The plan restricted it by ACL to the MGMT subnet, but Packet Tracer rejects an ACL on the community ([matrix](../pt-support-matrix.md) P0-16d); management access is limited by the VTY `access-class` instead.
 - `service password-encryption` (type 7) to keep plain-text passwords off the screen; all real secrets use `secret` (type 5/8/9 where available).
 
 ## Alternatives considered

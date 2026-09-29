@@ -8,7 +8,7 @@ Chicago is a 36-person office behind an ASA, with a redundant pair of L3 switche
 
 ## Decision
 
-Use a **policy-based IPsec tunnel** (ASA crypto map to IOS crypto map on LON-EDGE-02) for 10.30.0.0/16 ↔ 10.0.0.0/8, a static route for 10.30.0.0/16 on EDGE-02 (tracked against its ISP link) redistributed into OSPF, NAT exemption on both ends, and static default routes from both site switches to the ASA. **LON-EDGE-01 is a backup peer:** the ASA's crypto map lists both edges, and EDGE-01 holds a floating static route (AD 250) that only enters routing when EDGE-02's route is withdrawn.
+Use a **policy-based IPsec tunnel** (ASA crypto map to IOS crypto map on LON-EDGE-02) for 10.30.0.0/16 ↔ 10.0.0.0/8, a static route for 10.30.0.0/16 on EDGE-02 via ISP-B redistributed into OSPF, NAT exemption on both ends, and static default routes from both site switches to the ASA. **LON-EDGE-01 is a backup peer:** the ASA's crypto map lists both edges, and EDGE-01 holds a floating static route (AD 250) that only enters routing when EDGE-02's route is withdrawn.
 
 ## Alternatives considered
 
@@ -19,6 +19,7 @@ Use a **policy-based IPsec tunnel** (ASA crypto map to IOS crypto map on LON-EDG
 ## Consequences
 
 - Simple and typical for a branch behind a firewall.
-- Failover relies on the ASA noticing the primary peer is gone and on EDGE-02's route being withdrawn when its ISP link drops. A failure that keeps EDGE-02's link up but breaks the path beyond it isn't detected (production: IP SLA tracking, or a route-based VPN with a routing protocol).
+- Failover relies on the ASA noticing the primary peer is gone and on EDGE-02's route being withdrawn when its ISP link drops. Packet Tracer has no tracked static routes ([matrix](../pt-support-matrix.md) P0-13), so the route goes only because its next hop becomes unreachable when the link is down. A failure that keeps EDGE-02's link up but breaks the path beyond it isn't detected (production: IP SLA tracking, or a route-based VPN with a routing protocol).
+- The redistribution can't be filtered in Packet Tracer (no route-maps), so the edges also export the Null0 anchors for the public block into OSPF ([ADR 0001](0001-active-standby-internet-edge.md)).
 - The ASA and Chicago's single ISP remain single points of failure.
 - The zone-based firewall on EDGE-02 passes Chicago traffic statelessly in both directions (trusted site).

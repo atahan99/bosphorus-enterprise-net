@@ -65,12 +65,12 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | LON-EDGE-01 | Gi0/0/0 | 198.51.100.2/30 | ISP-A (outside) |
 | | Gi0/0/1 | 10.255.0.1/30 | LON-CORE-01 |
 | | Gi0/0/2 | 172.16.100.2/24 | DMZ (HSRP VIP 172.16.100.1, active) |
-| | Loopback0 | 10.255.255.1/32 | Router ID, iBGP source |
+| | Loopback0 | 10.255.255.1/32 | Router ID |
 | | Tunnel0 | 10.255.1.1/30 | GRE/IPsec to IST (primary) |
 | LON-EDGE-02 | Gi0/0/0 | 198.51.100.6/30 | ISP-B (outside) |
 | | Gi0/0/1 | 10.255.0.5/30 | LON-CORE-02 |
 | | Gi0/0/2 | 172.16.100.3/24 | DMZ (HSRP standby) |
-| | Loopback0 | 10.255.255.2/32 | Router ID, iBGP source |
+| | Loopback0 | 10.255.255.2/32 | Router ID |
 | | Tunnel1 | 10.255.1.5/30 | GRE/IPsec to IST (backup) |
 | LON-CORE-01 | Gi1/0/20 (routed) | 10.255.0.2/30 | LON-EDGE-01 |
 | | Gi1/0/21 (routed) | 10.255.0.13/30 | LON-WAN-01 |

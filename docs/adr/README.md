@@ -6,7 +6,7 @@ Short records of the significant design decisions: context, decision, alternativ
 |---|---|
 | [0001](0001-active-standby-internet-edge.md) | Active/standby internet edge instead of load-sharing |
 | [0002](0002-hsrp-not-vrrp.md) | HSRP instead of VRRP |
-| [0003](0003-single-redistribution-point.md) | One EIGRP/OSPF redistribution point, with route tags |
+| [0003](0003-single-redistribution-point.md) | One EIGRP/OSPF redistribution point |
 | [0004](0004-vtp-transparent.md) | VTP transparent mode |
 | [0005](0005-lacp-core-only.md) | LACP for the core bundle, no bundling to access switches |
 | [0006](0006-gre-over-ipsec-istanbul.md) | GRE over IPsec for Istanbul |

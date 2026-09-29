@@ -44,24 +44,26 @@ The server picks the pool whose gateway matches the relaying SVI's subnet, so th
 
 ### Services → AAA (On)
 
-**Network configuration (clients).** Each device authenticates from its Loopback0 when `ip tacacs source-interface Loopback0` is accepted. If it was rejected, use the fallback IP instead (the interface the request leaves from).
+**Network configuration (clients).** Packet Tracer has no `ip tacacs source-interface` (matrix B-01), so each device's TACACS+ request comes from the interface it leaves by. Register that address. Where a second path exists, add the backup-path address as another client so logins still work after a failover.
 
-| Client name | Client IP | Fallback IP | Secret | Type |
+| Client name | Client IP | Also add (backup path) | Secret | Type |
 |---|---|---|---|---|
-| LON-EDGE-01 | 10.255.255.1 | 10.255.0.1 | Lab-Tacacs-1 | Tacacs |
-| LON-EDGE-02 | 10.255.255.2 | 10.255.0.5 | Lab-Tacacs-1 | Tacacs |
-| LON-CORE-01 | 10.255.255.3 | 10.10.80.2 | Lab-Tacacs-1 | Tacacs |
-| LON-CORE-02 | 10.255.255.4 | 10.10.80.3 | Lab-Tacacs-1 | Tacacs |
-| LON-WAN-01 | 10.255.255.5 | 10.255.0.14 (add 10.255.0.18 too) | Lab-Tacacs-1 | Tacacs |
-| IST-RTR-01 | 10.255.255.11 | 10.255.1.2 (add 10.255.1.6 too) | Lab-Tacacs-1 | Tacacs |
-| TOR-RTR-01 | 10.255.255.21 | 10.255.2.2 (add 10.255.2.6 too) | Lab-Tacacs-1 | Tacacs |
+| LON-EDGE-01 | 10.255.0.1 | — | Lab-Tacacs-1 | Tacacs |
+| LON-EDGE-02 | 10.255.0.5 | — | Lab-Tacacs-1 | Tacacs |
+| LON-CORE-01 | 10.10.80.2 | — | Lab-Tacacs-1 | Tacacs |
+| LON-CORE-02 | 10.10.80.3 | — | Lab-Tacacs-1 | Tacacs |
+| LON-WAN-01 | 10.255.0.14 | 10.255.0.18 | Lab-Tacacs-1 | Tacacs |
+| IST-RTR-01 | 10.255.1.2 | 10.255.1.6 | Lab-Tacacs-1 | Tacacs |
+| TOR-RTR-01 | 10.255.2.2 | 10.255.2.6 | Lab-Tacacs-1 | Tacacs |
 | LON-ACC-01 … LON-ACC-04 | 10.10.10.11 … 10.10.10.14 (one entry each) | — | Lab-Tacacs-1 | Tacacs |
 | LON-SRV-SW01 | 10.10.10.15 | — | Lab-Tacacs-1 | Tacacs |
 | LON-VOICE-01 | 10.10.50.10 | — | Lab-Tacacs-1 | Tacacs |
-| IST-SW-01, IST-SW-02 | 10.255.255.12, 10.255.255.13 | 10.20.0.2, 10.20.0.6 | Lab-Tacacs-1 | Tacacs |
-| TOR-SW-01, TOR-SW-02 | 10.255.255.22, 10.255.255.23 | 10.40.0.2, 10.40.0.6 | Lab-Tacacs-1 | Tacacs |
-| CHI-SW-01, CHI-SW-02 | 10.30.10.2, 10.30.10.3 | 10.30.0.2, 10.30.0.6 | Lab-Tacacs-1 | Tacacs |
+| IST-SW-01, IST-SW-02 | 10.20.0.2, 10.20.0.6 | — | Lab-Tacacs-1 | Tacacs |
+| TOR-SW-01, TOR-SW-02 | 10.40.0.2, 10.40.0.6 | — | Lab-Tacacs-1 | Tacacs |
+| CHI-SW-01, CHI-SW-02 | 10.30.0.2, 10.30.0.6 | 10.30.0.9, 10.30.0.10 (VLAN 900) | Lab-Tacacs-1 | Tacacs |
 | LON-WLC-01 | 10.10.10.20 | — | Lab-Radius-1 | Radius |
+
+If a login shows `% Login invalid` although the password is right, the server answered from a client IP it doesn't know. IOS only falls back to the local user when the server is unreachable, not when it rejects, so every config also has a console-only local list (`aaa authentication login CONSOLE local`) as a way back in.
 
 LON-DMZ-SW01 and CHI-FW-01 use local accounts only (see their configs).
 
