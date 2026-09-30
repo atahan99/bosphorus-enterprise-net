@@ -4,7 +4,7 @@
 
 ## Context
 
-London has two edge routers, each with its own ISP. Each edge translates internal traffic to its own PAT address (203.0.113.1 and 203.0.113.2), and each runs a stateful zone-based firewall.
+London has two edge routers, each with its own ISP. Each edge translates internal traffic to its own PAT address (203.0.113.1 and 203.0.113.2), and each runs a stateful firewall (a zone-based firewall until Phase 6, now CBAC with ACLs, [ADR 0015](0015-cbac-not-zbf.md)).
 
 Phase 0 showed that Packet Tracer lacks the tools the first version of this decision relied on: iBGP, prefix-lists, route-maps (so no AS-path prepend), neighbor `default-originate`, and `metric` / `metric-type` on `default-information originate` (see [`pt-support-matrix.md`](../pt-support-matrix.md) P0-10 to P0-13).
 
@@ -31,5 +31,5 @@ Run the edge **active/standby**, with EDGE-01 active:
 - Failover is automatic, but failback is not: PT does not restart `default-information originate` when the BGP default returns (B-37). After ISP-A recovers, re-enter the command on EDGE-01 and run `clear ip bgp *` on EDGE-02 (B-38); until then London keeps using EDGE-02, which still works.
 - Toronto learns its internet default from London (OSPF redistributed into EIGRP on LON-WAN-01). The cores' floating statics are not redistributed, so Toronto has no internet access while EDGE-01's default is down. Istanbul and Chicago use their own ISP links and are unaffected.
 - Packet Tracer has no HSRP tracking, so the DMZ gateway (HSRP 100) no longer follows an ISP-A failure by itself. After failover, published DMZ services stay reachable only once EDGE-01's DMZ interface is shut or its HSRP priority lowered by hand (test T04).
-- Because the static redistribution for the Chicago backup can't be filtered, the Null0 anchors for the public block are also exported into OSPF. Internal hosts can't reach the company's public addresses from inside, which no designed flow needs.
+- The edges don't redistribute statics into OSPF (the first Chicago design did, and PT couldn't filter it, B-27); the Null0 anchors for the public block stay local to each edge.
 - London accepts every prefix the ISPs send and exports only what its `network` statements list; there are no inbound or outbound BGP filters and no session passwords.

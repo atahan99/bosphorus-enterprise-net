@@ -67,11 +67,13 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | | Gi0/0/2 | 172.16.100.2/24 | DMZ (HSRP VIP 172.16.100.1, active) |
 | | Loopback0 | 10.255.255.1/32 | Router ID |
 | | Tunnel0 | 10.255.1.1/30 | GRE/IPsec to IST (primary) |
+| | Tunnel2 | 10.255.1.9/30 | GRE/IPsec to CHI (primary) |
 | LON-EDGE-02 | Gi0/0/0 | 198.51.100.6/30 | ISP-B (outside) |
 | | Gi0/0/1 | 10.255.0.5/30 | LON-CORE-02 |
 | | Gi0/0/2 | 172.16.100.3/24 | DMZ (HSRP standby) |
 | | Loopback0 | 10.255.255.2/32 | Router ID |
 | | Tunnel1 | 10.255.1.5/30 | GRE/IPsec to IST (backup) |
+| | Tunnel3 | 10.255.1.13/30 | GRE/IPsec to CHI (backup) |
 | LON-CORE-01 | Gi1/0/20 (routed) | 10.255.0.2/30 | LON-EDGE-01 |
 | | Gi1/0/21 (routed) | 10.255.0.13/30 | LON-WAN-01 |
 | | Vlan900 | 10.255.0.9/30 | Core-to-core transit |
@@ -99,12 +101,12 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | Device | Interface | Address | Connects to / purpose |
 |---|---|---|---|
 | IST-RTR-01 | Gi0/0/0 | 198.51.100.10/30 | ISP-A (outside) |
-| | Gi0/0/1 | 10.20.0.1/30 | IST-SW-01 |
+| | Gi0/0/1 | 10.20.0.13/30 | IST-SW-01 (not 10.20.0.0/30, matrix B-47) |
 | | Gi0/0/2 | 10.20.0.5/30 | IST-SW-02 |
 | | Tunnel0 | 10.255.1.2/30 | To LON-EDGE-01 |
 | | Tunnel1 | 10.255.1.6/30 | To LON-EDGE-02 |
 | | Loopback0 | 10.255.255.11/32 | Router ID |
-| IST-SW-01 | Gi1/0/22 (routed) | 10.20.0.2/30 | IST-RTR-01 |
+| IST-SW-01 | Gi1/0/22 (routed) | 10.20.0.14/30 | IST-RTR-01 |
 | | Vlan10/20/50/60/70 | 10.20.x.2/24 | Gateways (HSRP .1) |
 | | Loopback0 | 10.255.255.12/32 | Router ID, TACACS+ source |
 | IST-SW-02 | Gi1/0/22 (routed) | 10.20.0.6/30 | IST-RTR-01 |
@@ -115,13 +117,18 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 
 | Device | Interface | Address | Connects to / purpose |
 |---|---|---|---|
-| CHI-FW-01 | Gi1/1 (outside, sec 0) | 198.51.100.14/30 | ISP-B |
-| | Gi1/2 (inside, sec 100) | 10.30.0.1/30 | CHI-SW-01 |
-| | Gi1/3 (inside2, sec 100) | 10.30.0.5/30 | CHI-SW-02 |
-| CHI-SW-01 | Gi1/0/22 (routed) | 10.30.0.2/30 | CHI-FW-01 inside |
+| CHI-RTR-01 | Gi0/0/0 | 198.51.100.14/30 | ISP-B (outside) |
+| | Gi0/0/1 | 10.30.0.13/30 | CHI-SW-01 (not 10.30.0.0/30, matrix B-47) |
+| | Gi0/0/2 | 10.30.0.5/30 | CHI-SW-02 |
+| | Tunnel0 | 10.255.1.10/30 | To LON-EDGE-01 |
+| | Tunnel1 | 10.255.1.14/30 | To LON-EDGE-02 |
+| | Loopback0 | 10.255.255.31/32 | Router ID |
+| CHI-SW-01 | Gi1/0/22 (routed) | 10.30.0.14/30 | CHI-RTR-01 |
 | | Vlan10/20/50/60/70 | 10.30.x.2/24 | Gateways (HSRP .1); Vlan10 is the TACACS+ source |
-| CHI-SW-02 | Gi1/0/22 (routed) | 10.30.0.6/30 | CHI-FW-01 inside2 |
+| | Loopback0 | 10.255.255.32/32 | OSPF router ID |
+| CHI-SW-02 | Gi1/0/22 (routed) | 10.30.0.6/30 | CHI-RTR-01 |
 | | Vlan10/20/50/60/70 | 10.30.x.3/24 | Gateways; Vlan10 is the TACACS+ source |
+| | Loopback0 | 10.255.255.33/32 | OSPF router ID |
 
 ### Toronto
 
@@ -148,7 +155,7 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | | | Fa4/0 | 198.51.100.17/30 | ISP-B |
 | | | Fa5/0 | 198.51.100.21/30 | INET-CORE |
 | ISP-B | 65002 | Fa0/0 | 198.51.100.5/30 | LON-EDGE-02 |
-| | | Fa1/0 | 198.51.100.13/30 | CHI-FW-01 |
+| | | Fa1/0 | 198.51.100.13/30 | CHI-RTR-01 |
 | | | Fa4/0 | 198.51.100.18/30 | ISP-A |
 | | | Fa5/0 | 198.51.100.25/30 | INET-CORE |
 | INET-CORE | 65000 | Fa0/0 | 198.51.100.22/30 | ISP-A |
@@ -166,7 +173,9 @@ The ISPs advertise their connected /30s into BGP, so the branch routers and HQ e
 | LON-CORE-01 | 10.255.255.3 | IST-SW-02 | 10.255.255.13 |
 | LON-CORE-02 | 10.255.255.4 | TOR-RTR-01 | 10.255.255.21 |
 | LON-WAN-01 | 10.255.255.5 | TOR-SW-01 | 10.255.255.22 |
-| | | TOR-SW-02 | 10.255.255.23 |
+| CHI-RTR-01 | 10.255.255.31 | TOR-SW-02 | 10.255.255.23 |
+| CHI-SW-01 | 10.255.255.32 | | |
+| CHI-SW-02 | 10.255.255.33 | | |
 
 ## 5. Public addresses and NAT
 
@@ -177,9 +186,9 @@ The ISPs advertise their connected /30s into BGP, so the branch routers and HQ e
 | 203.0.113.10 | 172.16.100.10 (LON-DMZ-WEB-01) | Both edges (static NAT) |
 | 203.0.113.53 | 172.16.100.53 (LON-DMZ-DNS-01) | Both edges (static NAT) |
 | 198.51.100.10 | PAT for 10.20.0.0/16 | IST-RTR-01 (interface overload) |
-| 198.51.100.14 | PAT for 10.30.0.0/16 | CHI-FW-01 (interface PAT) |
+| 198.51.100.14 | PAT for 10.30.0.0/16 | CHI-RTR-01 (interface overload) |
 
-Both edges hold `ip route 203.0.113.0 255.255.255.0 Null0` so the /24 can be advertised with a BGP `network` statement. VPN traffic between sites is exempted from NAT. Toronto has no internet connection and is translated at the London edge.
+Both edges hold `ip route 203.0.113.0 255.255.255.0 Null0` so the /24 can be advertised with a BGP `network` statement. Traffic between sites is exempted from NAT (deny line in each NAT ACL); the GRE tunnels carry it untranslated. Toronto has no internet connection and is translated at the London edge.
 
 ## 6. Static hosts
 

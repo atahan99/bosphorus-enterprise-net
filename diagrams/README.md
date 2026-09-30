@@ -29,7 +29,7 @@ flowchart TB
   ISPA --- E1
   ISPB --- E2
   ISPA --- IST["Istanbul: 30 staff, 10.20.0.0/16<br/>IST-RTR-01, IST-SW-01/02 pair, 2 APs"]
-  ISPB --- CHI["Chicago: 36 staff, 10.30.0.0/16<br/>CHI-FW-01 (ASA), CHI-SW-01/02 pair, 2 APs"]
+  ISPB --- CHI["Chicago: 36 staff, 10.30.0.0/16<br/>CHI-RTR-01, CHI-SW-01/02 pair, 2 APs"]
   WAN -. "two private circuits (serial, PPP/CHAP)" .- TOR["Toronto: 36 staff, 10.40.0.0/16<br/>TOR-RTR-01, TOR-SW-01/02 pair, 2 APs"]
 ```
 
@@ -57,7 +57,7 @@ Every downlink is dual-homed: root guard on the core side, loop guard on the acc
 
 ```mermaid
 flowchart TB
-  UP["IST-RTR-01 (OSPF) / CHI-FW-01 (static) / TOR-RTR-01 (EIGRP)"]
+  UP["IST-RTR-01 (OSPF area 1) / CHI-RTR-01 (OSPF area 2) / TOR-RTR-01 (EIGRP)"]
   S1["SW-01 (3650)<br/>HSRP active 10, 20, 60<br/>15-18 desks, AP BSP-CORP"]
   S2["SW-02 (3650)<br/>HSRP active 50, 70<br/>15-18 desks, printer, AP BSP-GUEST"]
   UP -- "routed /30, Gi1/0/22" --- S1
@@ -75,49 +75,54 @@ flowchart LR
     ISPA["ISP-A AS 65001"]
     ISPB["ISP-B AS 65002"]
   end
-  subgraph AS["AS 65100 (iBGP between edge loopbacks)"]
+  subgraph AS["AS 65100 (no iBGP in PT)"]
     subgraph A0["OSPF area 0"]
-      E1["EDGE-01<br/>ABR, ASBR<br/>default metric 10"]
-      E2["EDGE-02<br/>ABR, ASBR<br/>default metric 100<br/>+ static 10.30.0.0/16"]
-      CORE["CORE-01 / CORE-02"]
+      E1["EDGE-01<br/>ABR, ASBR<br/>only default originator"]
+      E2["EDGE-02<br/>ABR"]
+      CORE["CORE-01 / CORE-02<br/>floating static default to EDGE-02"]
       WAN["LON-WAN-01<br/>ASBR"]
     end
     subgraph A1["OSPF area 1"]
       IST["IST-RTR-01 + IST-SW-01/02"]
     end
+    subgraph A2["OSPF area 2"]
+      CHI["CHI-RTR-01 + CHI-SW-01/02"]
+    end
     subgraph EIGRP["EIGRP AS 100"]
       TOR["TOR-RTR-01<br/>summary 10.40.0.0/16"]
-      TORC["TOR-SW-01/02 (stubs)"]
+      TORC["TOR-SW-01/02"]
       TOR --- TORC
     end
   end
-  ISPA -- "eBGP: /24 out, default in" --- E1
-  ISPB -- "eBGP: /24 prepended x2" --- E2
+  ISPA -- "eBGP: two /25s out, default in" --- E1
+  ISPB -- "eBGP: /24 out, default in" --- E2
   E1 --- CORE --- E2
   CORE --- WAN
-  E1 -- "Tunnel0 cost 10" --- IST
-  E2 -- "Tunnel1 cost 100" --- IST
-  WAN -- "2 circuits; redistribution, tags 100/110" --- TOR
-  E2 -. "IPsec primary (static)" .- CHI["CHI-FW-01 + CHI-SW-01/02"]
-  E1 -. "IPsec backup" .- CHI
+  E1 -- "Tunnel0 (primary)" --- IST
+  E2 -- "Tunnel1 (backup)" --- IST
+  E1 -- "Tunnel2 (primary)" --- CHI
+  E2 -- "Tunnel3 (backup)" --- CHI
+  WAN -- "2 circuits; mutual redistribution" --- TOR
 ```
 
-Summaries at the ABRs: `10.10.0.0/16` into area 1, `10.20.0.0/16` into area 0.
+Summary at the ABRs: `10.10.0.0/16` into areas 1 and 2. The branch subnets reach area 0 unsummarised (matrix B-48). Tunnel costs can't be set in PT (matrix B-40): EDGE-02's cost-1000 core link makes EDGE-01 the primary path.
 
-## 4. Security zones (London edge)
+## 4. Firewall policy (London edge)
 
 ```mermaid
 flowchart LR
-  IN["INSIDE<br/>core link, tunnels"]
+  IN["Inside<br/>core link, GRE tunnels<br/>(unfiltered)"]
   DMZ["DMZ<br/>172.16.100.0/24"]
-  OUT["OUTSIDE<br/>ISP"]
-  IN -- "inspect: http, https, dns, icmp<br/>(EDGE-02: pass Chicago VPN)" --> OUT
-  IN -- "pass: web/DNS to servers, SSH from MGMT" --> DMZ
-  DMZ -- "pass: replies only" --> IN
-  OUT -- "inspect: web, DNS to published hosts" --> DMZ
-  DMZ -- "inspect: http, https, dns, icmp" --> OUT
-  OUT -. "drop<br/>(EDGE-02: pass Chicago VPN)" .-> IN
+  OUT["Internet<br/>ISP"]
+  IN -- "inspect (CBAC out on Gi0/0/0)" --> OUT
+  IN -- "ACL-TO-DMZ: web/DNS to servers, SSH from MGMT" --> DMZ
+  DMZ -- "ACL-DMZ-IN: replies only" --> IN
+  OUT -- "ACL-OUTSIDE-IN + ACL-TO-DMZ: web, DNS to published hosts (inspected)" --> DMZ
+  DMZ -- "ACL-DMZ-IN: web, DNS (inspected)" --> OUT
+  OUT -. "ACL-OUTSIDE-IN: drop (only BGP, IKE/ESP/GRE from peers)" .-> IN
 ```
+
+CBAC and ACLs replaced the zone-based firewall in Phase 6, because Packet Tracer can't put GRE tunnels in a zone ([ADR 0015](../docs/adr/0015-cbac-not-zbf.md)).
 
 ## 5. VPN overlay
 
@@ -126,11 +131,11 @@ flowchart LR
   E1["LON-EDGE-01<br/>198.51.100.2"]
   E2["LON-EDGE-02<br/>198.51.100.6"]
   IST["IST-RTR-01<br/>198.51.100.10"]
-  CHI["CHI-FW-01<br/>198.51.100.14"]
-  E1 == "GRE/IPsec Tunnel0 10.255.1.0/30<br/>primary, OSPF" === IST
-  E2 -- "GRE/IPsec Tunnel1 10.255.1.4/30<br/>backup, OSPF" --- IST
-  E2 -- "IPsec crypto map (primary)<br/>10.0.0.0/8 to 10.30.0.0/16" --- CHI
-  E1 -. "IPsec backup peer" .- CHI
+  CHI["CHI-RTR-01<br/>198.51.100.14"]
+  E1 == "GRE/IPsec Tunnel0 10.255.1.0/30<br/>primary, OSPF area 1" === IST
+  E2 -- "GRE/IPsec Tunnel1 10.255.1.4/30<br/>backup, OSPF area 1" --- IST
+  E1 == "GRE/IPsec Tunnel2 10.255.1.8/30<br/>primary, OSPF area 2" === CHI
+  E2 -- "GRE/IPsec Tunnel3 10.255.1.12/30<br/>backup, OSPF area 2" --- CHI
 ```
 
 ## 6. Wireless

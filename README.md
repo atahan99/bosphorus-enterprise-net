@@ -17,7 +17,7 @@ The scenario is fictional. Every design choice (which routing protocol runs wher
                  /        \               /        \
           eBGP  /     IST WAN        eBGP /     CHI WAN
                |          |              |          |
-        [LON-EDGE-01]        [LON-EDGE-02]      [CHI-FW-01 ASA]
+        [LON-EDGE-01]        [LON-EDGE-02]      [CHI-RTR-01]    
            |    \   DMZ (HSRP)   /   |             /     \
            |     [LON-DMZ-SW01]      |      [CHI-SW-01]=[CHI-SW-02]
            |      WEB   DNS          |
@@ -32,14 +32,15 @@ The scenario is fictional. Every design choice (which routing protocol runs wher
 Branch pairs (=): two 3650s, LACP bundle, HSRP, one uplink each
 Overlays:  GRE/IPsec Tunnel0  LON-EDGE-01 <-> IST  (primary)
            GRE/IPsec Tunnel1  LON-EDGE-02 <-> IST  (backup)
-           ASA crypto map     CHI <-> LON-EDGE-02  (EDGE-01 as backup peer)
+           GRE/IPsec Tunnel2  LON-EDGE-01 <-> CHI  (primary)
+           GRE/IPsec Tunnel3  LON-EDGE-02 <-> CHI  (backup)
 ```
 
 | Site | Staff | Role | WAN | Routing |
 |---|---|---|---|---|
 | **London (LON)** | 80 | HQ: redundant core, 4 access switches, servers, DMZ, Wi-Fi, voice, internet edge | ISP-A primary, ISP-B backup | OSPF area 0, eBGP |
 | **Istanbul (IST)** | 30 | Regional office, redundant switch pair | ISP-A + GRE over IPsec to both London edges | OSPF area 1 |
-| **Chicago (CHI)** | 36 | Office behind an ASA, redundant switch pair | ISP-B + ASA IPsec (primary EDGE-02, backup EDGE-01) | Static |
+| **Chicago (CHI)** | 36 | Branch office, redundant switch pair | ISP-B + GRE over IPsec to both London edges | OSPF area 2 |
 | **Toronto (TOR)** | 36 | Acquired site on a legacy design, redundant switch pair | Two private serial circuits to HQ, no local internet | EIGRP AS 100, redistributed at HQ |
 
 Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single switch failure takes a site down. Switch ports and DHCP scopes are sized for all 182 staff; Packet Tracer holds a representative sample of endpoints, and the branch AP layout is demo-scale rather than a production RF design (see [sizing](docs/design-plan.md#4-sizing)).
@@ -51,9 +52,9 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | Switching | VLANs, 802.1Q trunks (native VLAN 999, DTP off), VTP transparent, Rapid PVST+ with per-VLAN root placement, LACP EtherChannel |
 | L2 security | PortFast + BPDU guard, root guard, port security, DHCP snooping, DAI (configured; PT doesn't enforce it), rogue-switch attack demo |
 | Routing | Inter-VLAN routing on L3 switch SVIs, OSPF multi-area with MD5 and summarisation, EIGRP, single-point redistribution, eBGP with longest-match inbound engineering (PT has no iBGP, prefix-lists or route-maps) |
-| Redundancy | HSRP at every site, redundant switch pairs at the branches, dual ISP failover with symmetric NAT, backup VPN tunnel and backup VPN peer, dual Toronto circuits |
-| WAN / VPN | GRE over IPsec, ASA-to-IOS policy-based IPsec, PPP with CHAP |
-| Edge security | Zone-based firewall, PAT and static NAT, DMZ |
+| Redundancy | HSRP at every site, redundant switch pairs at the branches, dual ISP failover with symmetric NAT, backup VPN tunnels for both GRE branches, dual Toronto circuits |
+| WAN / VPN | GRE over IPsec with OSPF, PPP with CHAP (an ASA branch was planned but PT's ASA can't complete IPsec with IOS, [ADR 0007](docs/adr/0007-chicago-router-not-asa.md)) |
+| Edge security | Stateful firewall (CBAC + ACLs; zone-based firewall replaced in Phase 6, see ADR 0015), PAT and static NAT, DMZ |
 | Internal security | Inter-VLAN ACL policy matrix, AAA (TACACS+ / RADIUS), SSH-only management, NTP, Syslog, SNMP |
 | Services | DHCP, DNS, HTTP, email, TFTP config backups |
 | Wireless | Every site: WLC-3504 with lightweight APs in London, autonomous APs at the branches; WPA2-Enterprise corporate SSID, isolated guest SSID |
@@ -87,8 +88,8 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | 2 | Place and cable devices | ✅ |
 | 3 | London switching | ✅ |
 | 4 | London routing and first-hop redundancy | ✅ |
-| 5 | Internet edge (BGP, NAT, ZBF, DMZ) | ✅ |
-| 6 | Remote sites and VPNs | ⏳ |
+| 5 | Internet edge (BGP, NAT, firewall, DMZ) | ✅ |
+| 6 | Remote sites and VPNs | ✅ |
 | 7 | Security and management | ⏳ |
 | 8 | Wireless, voice, QoS | ⏳ |
 | 9 | Testing | ⏳ |

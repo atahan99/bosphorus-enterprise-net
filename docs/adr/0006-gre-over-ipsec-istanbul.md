@@ -8,7 +8,7 @@ Istanbul needs encrypted connectivity to London over the internet, with automati
 
 ## Decision
 
-Build **GRE tunnels protected by IPsec** (crypto map in transport mode, matching GRE between the public addresses) to both London edges, and run **OSPF area 1** inside them. Tunnel0 (to EDGE-01) costs 10, Tunnel1 (to EDGE-02) costs 100.
+Build **GRE tunnels protected by IPsec** (crypto map matching GRE between the public addresses; PT only offers tunnel mode, P0-14d) to both London edges, and run **OSPF area 1** inside them. Packet Tracer's ISR4331 accepts no `ip ospf cost` on a tunnel (B-40), so both tunnels have the same cost; EDGE-01 is still the primary path in both directions because EDGE-02's core link costs 1000. Chicago uses the same pattern with area 2 ([ADR 0007](0007-chicago-router-not-asa.md)).
 
 ## Alternatives considered
 
@@ -18,5 +18,5 @@ Build **GRE tunnels protected by IPsec** (crypto map in transport mode, matching
 ## Consequences
 
 - Dynamic routing and failover over the VPN (test T05).
-- Two ABRs summarise in each direction, so each side sees a single route for the other.
+- The ABRs summarise London (10.10.0.0/16) towards the branches. Summarising the branches into area 0 was dropped because PT generates it unreliably with two branch areas (B-48); London carries each branch's subnets.
 - Crypto maps with GRE are more configuration than VTI would be; the production-deltas list says so.

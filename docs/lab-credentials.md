@@ -4,8 +4,8 @@ Every secret in this lab, in one place. **These are lab-only values**, published
 
 | Purpose | Value | Where |
 |---|---|---|
-| Enable secret | `Lab-Enable-1` | All IOS devices, ASA enable password, ISP routers |
-| Local admin (fallback) | `netadmin` / `Lab-Admin-1` | All IOS devices and the ASA |
+| Enable secret | `Lab-Enable-1` | All IOS devices and ISP routers |
+| Local admin (fallback) | `netadmin` / `Lab-Admin-1` | All IOS devices |
 | TACACS+ admin | `netadmin` / `Lab-Tacacs-User-1` | LON-SRV-AAA-01; used whenever the AAA server is reachable |
 | TACACS+ shared key | `Lab-Tacacs-1` | Devices ↔ LON-SRV-AAA-01 |
 | RADIUS shared key | `Lab-Radius-1` | LON-WLC-01 and branch corporate APs ↔ LON-SRV-AAA-01 |
@@ -19,7 +19,7 @@ Every secret in this lab, in one place. **These are lab-only values**, published
 | HSRP MD5 | `Lab-Hsrp-1` | Not configured: Packet Tracer has no HSRP authentication (matrix P0-07a) |
 | PPP CHAP | `Lab-Chap-1` | LON-WAN-01 ↔ TOR-RTR-01 (both circuits) |
 | IKE PSK (Istanbul) | `Lab-Ike-1` | London edges ↔ IST-RTR-01 |
-| IKE PSK (Chicago) | `Lab-Ike-2` | LON-EDGE-02 ↔ CHI-FW-01 |
+| IKE PSK (Chicago) | `Lab-Ike-2` | London edges ↔ CHI-RTR-01 |
 | NTP key 1 | `Lab-Ntp-1` | All devices ↔ LON-SRV-OPS-01 |
 | SNMP RO community | `BSP-RO-Lab` | All IOS devices (restricted to the MGMT subnet) |
 | Mail users | `alice` / `Lab-Mail-1`, `bob` / `Lab-Mail-2` | LON-SRV-INTRA-01 |

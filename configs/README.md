@@ -6,7 +6,7 @@ One file per device, named after its hostname, grouped by site:
 |---|---|
 | `lon/` | London edge, core, WAN, access and DMZ switches, voice router, rogue test switch |
 | `ist/` | Istanbul router and switch |
-| `chi/` | Chicago ASA and switch |
+| `chi/` | Chicago router and switches |
 | `tor/` | Toronto router and switch |
 | `internet/` | ISP-A, ISP-B, INET-CORE, INET-SW |
 | `servers/` | Server-PT, WLC, phone and endpoint settings (GUI-configured, written as checklists) |

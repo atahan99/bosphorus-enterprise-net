@@ -11,7 +11,7 @@ Every model was placed in a throwaway file and read back live. Use the live name
 | Model | Live port names | Catalog said |
 |---|---|---|
 | 3650-24PS | `GigabitEthernet1/0/1`–`1/0/24`, `GigabitEthernet1/1/1`–`1/1/4` | `FastEthernet0/x`, `GigabitEthernet0/1–2` |
-| ASA 5506-X | `GigabitEthernet1/1`–`1/8`, `Management1/1` | `GigabitEthernet1/0`–`1/7` |
+| ASA 5506-X | `GigabitEthernet1/1`–`1/8`, `Management1/1` | `GigabitEthernet1/0`–`1/7` (no longer used: CHI-FW-01 was replaced in Phase 6) |
 | Router-PT | `FastEthernet0/0`, `1/0`, `4/0`, `5/0`, `Serial2/0`, `3/0` | `FastEthernet0/0`, `0/1` |
 | IP Phone 7960 | `Switch` (to the access switch), `PC` (to the desk PC) | `Port 0`, `PC Port` |
 | 3702i (LAP) | `GigabitEthernet0` | same |
@@ -46,7 +46,7 @@ Power off a device (Physical tab) before adding modules, then power it back on.
 | LON-WLC-01 | WLC-3504 | None |
 | IST-RTR-01 | ISR4331 | None. `securityk9` licence |
 | IST-SW-01, IST-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
-| CHI-FW-01 | ASA 5506-X | None |
+| CHI-RTR-01 | ISR4331 | None. `securityk9` licence (replaces the ASA 5506-X, [ADR 0007](adr/0007-chicago-router-not-asa.md)) |
 | CHI-SW-01, CHI-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
 | TOR-RTR-01 | ISR2911 | **HWIC-2T** in GUI slot 0 → Serial0/0/0–1. With MCP, install it using slot `0/0` |
 | TOR-SW-01, TOR-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
@@ -84,7 +84,7 @@ The lab places a **representative sample** of endpoints: enough to test every po
 
 ## 2. Infrastructure links
 
-Cable rule: **Copper Cross-Over** between like devices (router↔router, switch↔switch, router↔ASA); **Copper Straight-Through** between unlike devices (router↔switch, switch↔host, switch↔AP). For serial, use **Serial DCE** and click the DCE end first.
+Cable rule: **Copper Cross-Over** between like devices (router↔router, switch↔switch); **Copper Straight-Through** between unlike devices (router↔switch, switch↔host, switch↔AP). For serial, use **Serial DCE** and click the DCE end first.
 
 ### London
 
@@ -125,9 +125,9 @@ Every branch pair uses the same ports: Gi1/0/22 uplink, Gi1/0/23–24 the LACP b
 | B3 | IST-RTR-01 | Gi0/0/2 | IST-SW-02 | Gi1/0/22 | Straight | Routed /30 |
 | B4 | IST-SW-01 | Gi1/0/23 | IST-SW-02 | Gi1/0/23 | Cross | Po1 member |
 | B5 | IST-SW-01 | Gi1/0/24 | IST-SW-02 | Gi1/0/24 | Cross | Po1 member |
-| B6 | CHI-FW-01 | Gi1/1 | ISP-B | Fa1/0 | Cross | Outside |
-| B7 | CHI-FW-01 | Gi1/2 | CHI-SW-01 | Gi1/0/22 | Straight | Routed /30 (inside) |
-| B8 | CHI-FW-01 | Gi1/3 | CHI-SW-02 | Gi1/0/22 | Straight | Routed /30 (inside2) |
+| B6 | CHI-RTR-01 | Gi0/0/0 | ISP-B | Fa1/0 | Cross | Outside |
+| B7 | CHI-RTR-01 | Gi0/0/1 | CHI-SW-01 | Gi1/0/22 | Straight | Routed /30 |
+| B8 | CHI-RTR-01 | Gi0/0/2 | CHI-SW-02 | Gi1/0/22 | Straight | Routed /30 |
 | B9 | CHI-SW-01 | Gi1/0/23 | CHI-SW-02 | Gi1/0/23 | Cross | Po1 member |
 | B10 | CHI-SW-01 | Gi1/0/24 | CHI-SW-02 | Gi1/0/24 | Cross | Po1 member |
 | B11 | TOR-RTR-01 | Gi0/0 | TOR-SW-01 | Gi1/0/22 | Straight | Routed /30 |
@@ -198,5 +198,5 @@ Suggested placement so screenshots read left to right:
 
 - [x] Every link in §2 is green on both ends once interfaces are enabled (all 190 cabled ports up with the ISP routers' interfaces temporarily enabled).
 - [x] Hostnames set on all devices (the ISP routers, INET-SW and the WLC get theirs with their Phase 5 / Phase 8 config).
-- [ ] Every infrastructure interface has a description in the form `TO-<peer>-<peer-port>`: routers and the ASA done in Phase 2; the switch uplinks get theirs from the Phase 3, 4 and 6 sections.
+- [ ] Every infrastructure interface has a description in the form `TO-<peer>-<peer-port>`: routers done in Phase 2; the switch uplinks get theirs from the Phase 3, 4 and 6 sections.
 - [x] `show cdp neighbors` on each router and switch matches this file (30 of 30 live infrastructure links; the 8 ISP links are checked in Phase 5).

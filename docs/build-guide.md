@@ -90,7 +90,7 @@ reload
 
    Shortcut used in the Phase 2 build: before any config every London switch is in VLAN 1 and joined through the cores, so one temporary server on LON-ACC-01 Fa0/24 serves all five London 2960s at once (give each a different 192.168.99.x address, and wait about 30 s for spanning tree). LON-DMZ-SW01, INET-SW and LON-ROGUE-SW are isolated and each need their own temporary server.
 
-**Paste:** the `Phase 2: base` section on every router and switch that has one, and `Phase 2: base` on CHI-FW-01. The ISP routers are configured in Phase 5.
+**Paste:** the `Phase 2: base` section on every router and switch that has one. The ISP routers are configured in Phase 5.
 
 **Verify:**
 
@@ -186,7 +186,7 @@ Only EDGE-01 originates the OSPF default: PT load-shares two equal E2 defaults, 
 | `show standby brief` | EDGE-01 | DMZ group 100 Active |
 | Browse `http://www.example.test` | LON-PC-ENG-01 | Internet page loads |
 | `show ip nat translations` | EDGE-01 | PC's address translated to 203.0.113.1 |
-| `show policy-map type inspect zone-pair sessions` | EDGE-01 | Inspected session for the browse |
+| `show ip inspect sessions` | EDGE-01 | Inspected session for the browse (ZBF until Phase 6, see ADR 0015) |
 | Browse `http://203.0.113.10` and `http://www.bosphorus.test` | INET-HOST-01 | Public site loads |
 | Browse `http://www.bosphorus.test`, `nslookup www.bosphorus.test` | LON-PC-ENG-01 | Loads via split DNS (172.16.100.10); no new NAT entry |
 
@@ -196,44 +196,52 @@ Only EDGE-01 originates the OSPF default: PT load-shares two equal E2 defaults, 
 
 ## Phase 6: remote sites and VPNs
 
-**GUI:** add AC power supplies to all six branch 3650s before powering them on. Set every branch PC to DHCP. Branch phones and APs are powered by the 3650s (PoE).
+**GUI:** add AC power supplies to all six branch 3650s before powering them on. Set every branch PC to DHCP. Branch phones and APs are powered by the 3650s (PoE). On LON-SRV-AAA-01 add the TACACS+ clients `CHI-RTR-01` (10.255.1.10) and `CHI-RTR-01-B` (10.255.1.14) ([servers.md](../configs/servers/servers.md)).
+
+**Chicago changed in this phase:** the planned ASA (CHI-FW-01) was replaced by an ISR4331, CHI-RTR-01, built like IST-RTR-01, because PT's ASA could not complete IPsec with the IOS edges ([ADR 0007](adr/0007-chicago-router-not-asa.md), matrix B-44). Place an ISR4331 named CHI-RTR-01 and cable it as B6–B8 in the [cabling plan](cabling-plan.md).
 
 **Paste:**
 
-1. **Istanbul:** IST-RTR-01 (licence already reloaded in Phase 2): both `Phase 6` sections. IST-SW-01 and IST-SW-02: `Phase 2` and all `Phase 6` sections.
-2. **London VPN hub:** the `Phase 6` section on LON-EDGE-01 and LON-EDGE-02 (both now carry the Chicago VPN: EDGE-02 primary, EDGE-01 backup).
-3. **Chicago:** CHI-FW-01: its `Phase 6` sections. CHI-SW-01 and CHI-SW-02: `Phase 2` and all `Phase 6` sections.
+1. **Istanbul:** IST-RTR-01 (licence already active, B-30): both `Phase 6` sections. IST-SW-01 and IST-SW-02: `Phase 2` and all `Phase 6` sections.
+2. **Chicago:** CHI-RTR-01: `Phase 2` and both `Phase 6` sections. CHI-SW-01 and CHI-SW-02: `Phase 2` and all `Phase 6` sections.
+3. **London VPN hub:** the `Phase 6` section on LON-EDGE-01 and LON-EDGE-02 (GRE/IPsec to both branch routers).
 4. **Toronto:** the `Phase 6` section on LON-WAN-01 (both circuits). TOR-RTR-01: `Phase 6`. TOR-SW-01 and TOR-SW-02: `Phase 2` and all `Phase 6` sections.
+
+**Then, for Packet Tracer:**
+
+- **Po1 on every branch pair (B-33):** if `show etherchannel summary` shows `Po1(SD)` with members `(s)`, on both switches: `interface range GigabitEthernet1/0/23 - 24` → `shutdown` → `no channel-group 1` → `channel-group 1 mode active` → `no shutdown`, then `write memory`.
+- **Save the file and reopen it** (File → Open). PT keeps stale OSPF LSAs after config changes on the edges (B-46), and a reopen also triggers IKE on every tunnel.
+- **Firewall:** the `Phase 6` sections replace the Phase 5 zone-based firewall on both edges with CBAC and ACLs (PT can't put tunnels in a zone, B-50, [ADR 0015](adr/0015-cbac-not-zbf.md)). On a lab that already has the ZBF, remove the `zone-member security` lines, the zone-pairs, zones, inspect policy-maps/class-maps and the `ACL-ZBF-*` lists first.
+- **After any reopen:** re-enter the default on LON-EDGE-01 (`router ospf 1` → `no default-information originate` → `default-information originate`, B-37). If a tunnel stays down, ping across it from the branch router (`ping 10.255.1.5` etc.) to trigger IKE.
 
 **Verify:**
 
 | Command / action | Where | Expected |
 |---|---|---|
-| `show etherchannel summary` | Any branch switch | `Po1(SU)`, both members `(P)` |
-| `show standby brief` | IST-SW-01 | Active for 10, 20, 60; Standby for 50, 70 (SW-02 the reverse) |
-| `show ip dhcp binding` | Both switches of a branch | Leases split between them (lower half on SW-01, upper half on SW-02) |
-| `show crypto isakmp sa` | IST-RTR-01 | Two SAs (198.51.100.2 and .6), `QM_IDLE` |
-| `show crypto ipsec sa` | IST-RTR-01 | encaps/decaps counters increasing on both peers |
-| `show ip ospf neighbor` | IST-RTR-01 | FULL on Tunnel0, Tunnel1, Gi0/0/1 and Gi0/0/2 |
-| `show ip route ospf` | IST-SW-01 | `O IA 10.10.0.0/16`; static default to 10.20.0.1 in the table |
-| `show ip route 10.20.0.0` | LON-CORE-01 | `O IA 10.20.0.0/16` via EDGE-01 |
-| Ping 10.10.80.10 | CHI-PC-01 | Works after the first one or two time out (IKE negotiation) |
-| `show crypto isakmp sa`, `show crypto ipsec sa` | CHI-FW-01 | Tunnel to 198.51.100.6 up, counters increasing |
-| `show ip route 10.30.0.0` | LON-CORE-01 | `O E2 10.30.0.0/16` via EDGE-02 |
+| `show etherchannel summary` | Every branch switch | `Po1(SU)`, both members `(P)` |
+| `show standby brief` | IST-SW-01 (and CHI, TOR) | Active for 10, 20, 60; Standby for 50, 70 (SW-02 the reverse) |
+| PC → IP Configuration → DHCP | PC-01 and PC-02 at each branch | PC-01 (on SW-01) gets .100 from the lower half, PC-02 (on SW-02) gets .176 from the upper half |
+| `show crypto isakmp sa` | IST-RTR-01, CHI-RTR-01 | Two SAs (198.51.100.2 and .6), `QM_IDLE` |
+| `show crypto ipsec sa` | IST-RTR-01, CHI-RTR-01 | encaps/decaps counters increasing for both peers |
+| `show ip ospf neighbor` | IST-RTR-01, CHI-RTR-01 | FULL on Tunnel0, Tunnel1, Gi0/0/1 and Gi0/0/2 |
+| `show ip route` | IST-SW-01 | `O IA 10.10.0.0/16`; static default to 10.20.0.13 |
+| `show ip route ospf` | LON-CORE-01 | Istanbul (10.20.x) and Chicago (10.30.x) subnets as `O IA` via EDGE-01; branches are not summarised (B-48) |
 | `show interfaces serial0/0/0` and `serial0/0/1` | TOR-RTR-01 | Both up/up, `LCP Open` |
 | `show ip eigrp neighbors` | TOR-RTR-01 | LON-WAN-01 twice (10.255.2.1 and .5) and both Toronto switches |
 | `show ip route` | TOR-SW-01 | `D*EX 0.0.0.0/0` and London routes as `D EX` |
 | `show ip route 10.40.0.0` | LON-CORE-01 | `O E2 10.40.0.0/16` (the Toronto summary; no route tag, PT has no route-maps) |
-| Browse `http://www.example.test` | TOR-PC-01 | Works (via London's internet edge) |
-| Browse `http://www.example.test` | IST-PC-01, CHI-PC-01 | Works (local breakout) |
+| Ping 10.10.80.10 | IST-PC-01, CHI-PC-01, TOR-PC-01 | Works across the VPNs and circuits |
+| Browse `http://www.example.test` | IST-PC-01, CHI-PC-01 | Works (local breakout, PAT to 198.51.100.10 / .14) |
+| Browse `http://www.example.test` | TOR-PC-01 | Works (via London's internet edge, PAT to 203.0.113.1) |
+| `show ip inspect sessions` | LON-EDGE-01 | CBAC sessions for BGP, IKE and published-service traffic |
 
-**Screenshots:** `phase6-branch-hsrp.png`, `phase6-ist-crypto-sa.png`, `phase6-ist-ospf-routes.png`, `phase6-asa-vpn.png`, `phase6-tor-eigrp-neighbors.png`, `phase6-core-toronto-route.png`.
+**Screenshots:** `phase6-branch-hsrp.png`, `phase6-ist-crypto-sa.png`, `phase6-chi-crypto-sa.png`, `phase6-ist-ospf-neighbors.png`, `phase6-chi-ospf-neighbors.png`, `phase6-core-branch-routes.png`, `phase6-tor-eigrp-neighbors.png`, `phase6-tor-sw-routes.png`, `phase6-edge01-cbac.png`, `phase6-branch-pings.png`, plus `phase6-topology-full.png` and the close-ups `phase6-topology-part1-istanbul-chicago.png`, `part2-toronto-wan.png`, `part3-london-edges-internet.png`, `part4-phase-notes.png`.
 
 ---
 
 ## Phase 7: security and management
 
-**Paste the `Phase 7` sections on every device that has one** (all four sites), including CHI-FW-01. The simulated ISP and internet devices do not have Phase 7 sections.
+**Paste the `Phase 7` sections on every device that has one** (all four sites). The simulated ISP and internet devices do not have Phase 7 sections.
 
 From now on, console login asks for `netadmin` / `Lab-Admin-1` (see [lab-credentials.md](lab-credentials.md)).
 

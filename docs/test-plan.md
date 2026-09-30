@@ -32,7 +32,7 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 | T20 | Loop guard on a blocked uplink | n/a (not in PT, matrix P0-02b) |
 | T21 | Branch switch failure | |
 | T22 | Toronto circuit failure | |
-| T23 | Chicago backup VPN | |
+| T23 | Chicago backup tunnel | |
 | T24 | Dynamic ARP Inspection active on the access switches | |
 | T25 | BGP advertisements and inbound preference | |
 | T26 | QoS under congestion on a Toronto circuit | |
@@ -77,7 +77,7 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 | 24 | IST-PH-01 | LON-VOICE-01 / a London phone | register / call | ✔ | |
 | 25 | IST-PH-01 | www.example.test | browse or ping | ✘ | |
 | 26 | IST-PC-01 | 10.20.10.2 and 10.20.10.3 (own site's switch management) | ping, ssh | ✘ | |
-| 27 | IST-PC-01 | 10.20.0.1 (IST-RTR-01 transit) | ping | ✘ | |
+| 27 | IST-PC-01 | 10.20.0.13 (IST-RTR-01 transit) | ping | ✘ | |
 | 28 | TEST-PC on an Istanbul VLAN 50 port (IP phones can't originate pings) | 10.20.10.2 | ping | ✘ | |
 | 29 | TOR-LAPTOP-01 (branch corp) | LON-PC-ENG-01 | ping | ✔ | |
 | 30 | LON-PC-ENG-01 | TOR-LAPTOP-01 (branch corp) | ping | ✔ | |
@@ -188,16 +188,19 @@ Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via E
 
 ## T06: Chicago site-to-site VPN
 
-**Procedure:** CHI-PC-01 `ping 10.10.80.10` (repeat if the first attempts time out). Then:
+Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul. It was first designed around an ASA; PT's ASA could not complete IPsec with IOS ([ADR 0007](adr/0007-chicago-router-not-asa.md)).
+
+**Procedure:** CHI-PC-01 `ping 10.10.80.10` (repeat if the first attempt times out while IKE negotiates). Then:
 
 | Command | Where | Expected |
 |---|---|---|
-| `show crypto isakmp sa` | LON-EDGE-02 | Peer 198.51.100.14, QM_IDLE |
-| `show crypto ipsec sa` | LON-EDGE-02 | Peer .14 encaps/decaps increasing |
-| `show crypto isakmp sa`, `show crypto ipsec sa` | CHI-FW-01 | Peer 198.51.100.6, counters increasing |
+| `show crypto isakmp sa` | CHI-RTR-01 | Two SAs (198.51.100.2 and .6), `QM_IDLE` |
+| `show crypto ipsec sa` | CHI-RTR-01 | encaps/decaps increasing for both peers |
+| `show ip ospf neighbor` | CHI-RTR-01 | FULL on Tunnel0, Tunnel1, Gi0/0/1 and Gi0/0/2 |
+| `show ip route 10.30.20.0` | LON-CORE-01 | `O IA 10.30.20.0/24` via EDGE-01 |
 | Ping CHI-PC-01 from LON-MGMT-PC-01 | London | Works (London-initiated through the tunnel) |
 
-**Evidence:** `T06-edge02-ipsec.png`, `T06-asa-ipsec.png`. **Actual:**
+**Evidence:** `T06-chi-crypto.png`, `T06-core-chicago-route.png`. **Actual:**
 
 ---
 
@@ -316,9 +319,9 @@ Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via E
 3. `telnet 203.0.113.10` → fails (only web is published).
 4. `ping 203.0.113.1` → fails (PAT address, nothing listening).
 
-On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zone-pair security`) shows drops in class-default.
+On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the final `deny ip any any`.
 
-**Evidence:** `T16-internet-host.png`, `T16-zbf-drops.png`. **Actual:**
+**Evidence:** `T16-internet-host.png`, `T16-acl-drops.png`. **Actual:**
 
 ---
 
@@ -395,23 +398,13 @@ On LON-EDGE-01: `show policy-map type inspect zone-pair ZP-OUT-DMZ` (or `show zo
 
 ---
 
-## T23: Chicago backup VPN
+## T23: Chicago backup tunnel
 
-**Procedure:** on LON-EDGE-02: `interface GigabitEthernet0/0/0` → `shutdown` (EDGE-02 loses ISP-B). Wait for the ASA to give up on the primary peer (use Fast Forward Time), then ping 10.10.80.10 from CHI-PC-01.
+**Procedure:** on CHI-PC-01 `tracert 10.10.80.13`. On LON-EDGE-01: `interface Tunnel2` → `shutdown`. On CHI-RTR-01 `show ip route ospf`, then repeat the tracert. Restore with `no shutdown`.
 
-**Expected:**
+**Expected:** before, the path goes via 10.255.1.9 (EDGE-01); after, via 10.255.1.13 (EDGE-02), and CHI-RTR-01's London routes point at Tunnel1. LON-CORE-01 reaches the Chicago subnets via EDGE-02.
 
-| Check | Where | Expected |
-|---|---|---|
-| `show ip route 10.30.0.0` | LON-EDGE-02 | Static gone (its next hop is unreachable once the link is down) |
-| `show ip route 10.30.0.0` | LON-EDGE-01 | Floating static (AD 250) now installed |
-| `show ip route 10.30.0.0` | LON-CORE-01 | O E2 via EDGE-01, metric 20 |
-| `show crypto isakmp sa` | CHI-FW-01 | SA with 198.51.100.2 |
-| Ping 10.10.80.10 | CHI-PC-01 | Works |
-
-**Restore:** `no shutdown` on EDGE-02 Gi0/0/0. The ASA stays on EDGE-01 until that SA expires or is cleared (`clear crypto ikev1 sa` on the ASA), then returns to EDGE-02.
-
-**Evidence:** `T23-edge01-floating-route.png`, `T23-asa-backup-peer.png`. **Actual:**
+**Evidence:** `T23-tracert-before.png`, `T23-tracert-after.png`. **Actual:**
 
 ---
 

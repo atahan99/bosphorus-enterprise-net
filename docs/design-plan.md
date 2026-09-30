@@ -19,8 +19,8 @@ The project has to show that I can:
 | VLANs, 802.1Q, Rapid PVST+, LACP, L2 security | Remote-access VPN (Easy VPN) for a teleworker |
 | OSPF multi-area, EIGRP with redistribution, eBGP | PT Network Controller + Python in PT |
 | HSRP, dual-ISP failover, backup VPN tunnel | Config linting and Batfish checks in GitHub Actions |
-| GRE over IPsec, ASA IPsec, PPP/CHAP | OT zone using PT 9 industrial devices |
-| Zone-based firewall, NAT/PAT, DMZ | |
+| GRE over IPsec, PPP/CHAP | OT zone using PT 9 industrial devices |
+| Stateful firewall (CBAC + ACLs), NAT/PAT, DMZ | |
 | Wi-Fi at every site: WLC + lightweight APs in London, autonomous APs at branches | |
 | CME voice for all four sites, QoS (if Phase 0 confirms support) | |
 | AAA, SSH, NTP, Syslog, SNMP, TFTP backups | |
@@ -33,7 +33,7 @@ A fictional professional-services company with **182 staff** across four sites a
 |---|---|---|---|
 | **London (LON)** | 80 | HQ | Dual-homed to two ISPs with its own address space, which is what makes **BGP** necessary. Redundant collapsed core, OSPF area 0, the server room, DMZ and call control for the whole company. |
 | **Istanbul (IST)** | 30 | Regional office | Runs a routing protocol over its VPN: **OSPF area 1** over GRE/IPsec with a backup tunnel, extended to its two site switches. |
-| **Chicago (CHI)** | 36 | Office behind a firewall | One ASA and one site summary (10.30.0.0/16): **static routes** are all it needs, with a backup VPN peer in London. |
+| **Chicago (CHI)** | 36 | Office with its own internet breakout | Same pattern as Istanbul: **OSPF area 2** over GRE/IPsec to both London edges, extended to its two site switches. (First designed behind an ASA; replaced by a router, [ADR 0007](adr/0007-chicago-router-not-asa.md).) |
 | **Toronto (TOR)** | 36 | Recently acquired company | Kept its legacy **EIGRP** design and private circuits; integrated by **redistribution** at a single point. No local internet: it uses London's. |
 
 The Toronto circuits are modelled as PT serial links. In reality they would be carrier Ethernet or MPLS services; the limitation is recorded in the support matrix.
@@ -50,7 +50,7 @@ One switch port per desk: the PC plugs into the IP phone, the phone into the por
 |---|---|---|---|---|---|
 | London | 80 (ENG 40, SALES 25, FIN-HR 15) | 4 × 2960-24TT access (dual-homed to the core pair) + services switch | Each: 20 desks, 1 AP, printer on two of them (uplinks are the separate Gi ports) | 80 | 10 |
 | Istanbul | 30 | 2 × 3650-24PS (pair) | Each: Po1 (2), router link (1), AP (1), 20 desk-capable ports; printer on SW-02 | 30 of 39 | 9 |
-| Chicago | 36 | 2 × 3650-24PS (pair) | Each: Po1 (2), ASA link (1), AP (1), 20 desk-capable ports; printer on SW-02 | 36 of 39 | 3 |
+| Chicago | 36 | 2 × 3650-24PS (pair) | Each: Po1 (2), router link (1), AP (1), 20 desk-capable ports; printer on SW-02 | 36 of 39 | 3 |
 | Toronto | 36 | 2 × 3650-24PS (pair) | Same as Istanbul and Chicago | 36 of 39 | 3 |
 
 The branch 3650s supply PoE, so branch phones and APs need no power adapters. London's 2960-24TTs don't, which is recorded as a PT limitation (production would use PoE access switches).
@@ -123,15 +123,16 @@ Every site routes on L3 switch SVIs with HSRP. (Router-on-a-stick is still exerc
 | Area | Members |
 |---|---|
 | 0 | LON-EDGE-01/02, LON-CORE-01/02, LON-WAN-01 |
-| 1 | Both GRE tunnels, IST-RTR-01 and IST-SW-01/02. EDGE-01 and EDGE-02 are the ABRs |
+| 1 | Istanbul: both GRE tunnels, IST-RTR-01 and IST-SW-01/02. EDGE-01 and EDGE-02 are the ABRs |
+| 2 | Chicago: both GRE tunnels, CHI-RTR-01 and CHI-SW-01/02. EDGE-01 and EDGE-02 are the ABRs |
 
-- `passive-interface default`, enabling only real adjacencies.
-- `ip ospf network point-to-point` on /30s and tunnels.
+- `passive-interface default`, enabling only real adjacencies, except on routers with GRE tunnels: Packet Tracer can't name tunnels in `no passive-interface` (B-41), so those list their passive interfaces instead.
+- `ip ospf network point-to-point` on routed /30s (tunnels are point-to-point by default; PT accepts no OSPF commands on them, B-40).
 - `auto-cost reference-bandwidth 10000`.
-- MD5 authentication on both areas.
+- MD5 authentication in every area.
 - Router IDs from Loopback0.
-- Summarisation at the ABRs: `area 0 range 10.10.0.0 255.255.0.0` (Istanbul sees one London route) and `area 1 range 10.20.0.0 255.255.0.0` (London sees one Istanbul route).
-- Tunnel costs: Tunnel0 = 10, Tunnel1 = 100, so Tunnel1 is a hot standby.
+- Summarisation at the ABRs: `area 0 range 10.10.0.0 255.255.0.0`, so each branch sees one London route. The branches are **not** summarised into area 0: with two branch areas on the same ABRs, Packet Tracer generated only one of the two ranges, a different one on each load (B-48), so London carries the ~10 subnets of each branch instead. Production would add `area 1 range 10.20.0.0/16` and `area 2 range 10.30.0.0/16`.
+- Tunnel costs can't be set in Packet Tracer (B-40). Both tunnels of a branch have the same cost; EDGE-02's cost-1000 core link makes EDGE-01 the primary path in both directions, and the EDGE-02 tunnel is a hot standby.
 
 ### EIGRP AS 100 (Toronto) and redistribution
 
@@ -167,28 +168,27 @@ Packet Tracer supports eBGP only: no iBGP, prefix-lists, route-maps, session pas
 
 | Link | Design |
 |---|---|
-| **IST ↔ LON** | GRE over IPsec. GRE sourced from the public interfaces (EDGE-01 198.51.100.2, EDGE-02 198.51.100.6, IST 198.51.100.10). Crypto map on the physical outside interface matching `permit gre host X host Y`. IKEv1 PSK, AES-256 with SHA-1 and DH group 5, ESP `esp-aes 256 esp-sha-hmac` in tunnel mode: the strongest Packet Tracer accepts (matrix P0-14; production would use SHA-256 and group 14+). OSPF runs inside the tunnels, which is the reason for GRE. |
-| **CHI ↔ LON** | ASA crypto map ↔ IOS crypto map on LON-EDGE-02 (policy-based). Interesting traffic 10.30.0.0/16 ↔ 10.0.0.0/8. EDGE-02 has a static route for 10.30.0.0/16 via ISP-B and redistributes its statics into OSPF (`redistribute static subnets`). Packet Tracer can't track the route or filter the redistribution, so the route only goes when the ISP-B link itself drops, and the Null0 anchors for the public block are exported too (harmless, see ADR 0001). **Backup:** the ASA lists EDGE-01 as a second peer, and EDGE-01 has a floating static route (AD 250) that is only installed and advertised once EDGE-02's route is withdrawn. **NAT exemption on both ends** (deny line in the IOS NAT ACL, identity NAT on the ASA), otherwise traffic is PAT-translated before it reaches the crypto map. |
+| **IST ↔ LON, CHI ↔ LON** | GRE over IPsec, same pattern for both branches (Istanbul area 1, Chicago area 2). GRE sourced from the public interfaces (EDGE-01 198.51.100.2, EDGE-02 198.51.100.6, IST 198.51.100.10, CHI 198.51.100.14). Crypto map on the physical outside interface matching `permit gre host X host Y`. IKEv1 PSK, AES-256 with SHA-1 and DH group 5, ESP `esp-aes 256 esp-sha-hmac` in tunnel mode: the strongest Packet Tracer accepts (matrix P0-14; production would use SHA-256 and group 14+). OSPF runs inside the tunnels, which is the reason for GRE. Packet Tracer's tunnel interfaces take no OSPF settings (B-40); EDGE-01 is the preferred path because EDGE-02's core link costs 1000. |
 | **TOR ↔ LON** | Serial, `encapsulation ppp`, `ppp authentication chap`, per-peer `username` entries. LON-WAN-01 is DCE and sets `clock rate`. |
 
-Chicago keeps working if EDGE-02 or ISP-B's link to it fails (test T23). The ASA itself and Chicago's single ISP remain single points of failure (production: ASA HA pair, second ISP or LTE).
+Both branches keep working if either London edge or its ISP fails: OSPF moves to the other tunnel (tests T05, T23). Each branch router and its single ISP remain single points of failure (production: router pair, second ISP or LTE). Chicago was first designed around an ASA 5506-X; Packet Tracer's ASA could not complete IPsec with the IOS edges, so it was replaced by an ISR4331 ([ADR 0007](adr/0007-chicago-router-not-asa.md)).
 
-## 9. Internet edge: NAT, zone-based firewall, DMZ
+## 9. Internet edge: NAT, firewall, DMZ
 
 **NAT (each edge):** PAT for 10.0.0.0/8 to that edge's own 203.0.113.x, excluding site-to-site traffic; static NAT for the DMZ web and DNS servers, configured identically on both edges.
 
-**Zones (each edge):**
+**Firewall (each edge): CBAC + ACLs.** Phase 5 built this as a zone-based firewall; Phase 6 replaced it because Packet Tracer can't put GRE tunnels in a zone and ZBF then drops all branch traffic ([ADR 0015](adr/0015-cbac-not-zbf.md)). The policy is unchanged:
 
-| Traffic | Policy |
-|---|---|
-| INSIDE → OUTSIDE | Inspect HTTP, HTTPS, DNS, ICMP |
-| INSIDE → DMZ | Pass (stateless): web and DNS to the two servers, SSH to the DMZ switch from MGMT |
-| OUTSIDE → DMZ | Inspect HTTP, HTTPS, DNS to the static NAT hosts only |
-| DMZ → INSIDE | Pass replies to the flows above only (TCP `established`, DNS responses, echo-replies); everything else dropped |
-| DMZ → OUTSIDE | Inspect HTTP, HTTPS, DNS, ICMP |
-| OUTSIDE → INSIDE | Drop (EDGE-02: pass Chicago VPN traffic) |
+| Traffic | Policy | Where |
+|---|---|---|
+| Inside → internet | Stateful (inspect TCP, UDP, ICMP) | `ip inspect CBAC-OUT out` on Gi0/0/0 |
+| Internet → inside | Drop; only BGP from the ISP and IKE/ESP/GRE from the VPN peers reach the router | `ACL-OUTSIDE-IN` in on Gi0/0/0 |
+| Inside → DMZ | Pass (stateless): web and DNS to the two servers, SSH to the DMZ switch and ping from MGMT | `ACL-TO-DMZ` out on Gi0/0/2 |
+| Internet → DMZ | Web and DNS to the static NAT hosts only, stateful | `ACL-OUTSIDE-IN` + `ACL-TO-DMZ`, inspected out on Gi0/0/2 |
+| DMZ → inside | Replies to the flows above only (TCP `established`, DNS responses, echo-replies); everything else dropped | `ACL-DMZ-IN` in on Gi0/0/2 |
+| DMZ → internet | Web and DNS, stateful | `ACL-DMZ-IN`, inspected out on Gi0/0/0 |
 
-INSIDE ↔ DMZ is stateless because the DMZ gateway can move to EDGE-02 while internal traffic still enters the DMZ through EDGE-01; see [ADR 0011](adr/0011-stateless-inside-dmz.md). Tunnel interfaces and the core-facing link are in INSIDE. The self zone is left at IOS defaults so IKE, ESP, GRE, BGP and OSPF to the router keep working; this is documented. Istanbul reuses the template with INSIDE/OUTSIDE only. The Chicago ASA uses two inside interfaces (one to each site switch, security 100), outside (0), object NAT and no unsolicited inbound access; its route back to the site prefers CHI-SW-01 with a floating route via CHI-SW-02.
+Inside ↔ DMZ is stateless because the DMZ gateway can move to EDGE-02 while internal traffic still enters the DMZ through EDGE-01; see [ADR 0011](adr/0011-stateless-inside-dmz.md). The core link and the GRE tunnels are unfiltered (the old INSIDE zone). `ACL-DMZ-IN` also permits HSRP between the edges. IST-RTR-01 and CHI-RTR-01 use the same model: inspect outbound on the ISP interface, and inbound only IKE, ESP and GRE from the two London edges.
 
 ## 10. Internal security
 
@@ -266,9 +266,9 @@ Every site has the same two SSIDs:
 | One branch switch down | HSRP, the other switch's uplink, split DHCP | Only that switch's desks and AP are lost; gateways, DHCP and the WAN keep working |
 | One branch switch's uplink down | Routing via VLAN 900 | It keeps its gateways (no HSRP tracking in PT) and forwards over VLAN 900; traffic leaves through the other uplink |
 | One Toronto circuit down | EIGRP | All traffic on the remaining circuit |
-| LON-EDGE-02 or its ISP-B link down | Tracked static, floating static, ASA backup peer | Chicago's VPN moves to EDGE-01 |
+| LON-EDGE-01 or LON-EDGE-02 down | OSPF over the other tunnel | Istanbul and Chicago reconverge via the remaining edge |
 | LON-WAN-01 down | — | **Accepted SPOF** for Toronto (fix: terminate the second circuit on a second London router) |
-| IST-RTR-01, CHI-FW-01, TOR-RTR-01 or a branch ISP down | — | **Accepted SPOF** per branch (fix: router/firewall HA pair, second ISP or LTE backup) |
+| IST-RTR-01, CHI-RTR-01, TOR-RTR-01 or a branch ISP down | — | **Accepted SPOF** per branch (fix: router/firewall HA pair, second ISP or LTE backup) |
 | LON-WLC-01 down | — | **Accepted SPOF** (fix: HA pair) |
 | LON-VOICE-01 down | — | No calls anywhere. **Accepted SPOF** (fix: CUCM cluster, SRST at branches) |
 
@@ -301,7 +301,7 @@ Full procedures are in [test-plan.md](test-plan.md). Each test is recorded with 
 | T03 | Shut one Po1 member; zero loss |
 | T04 | Shut the ISP-A link: BGP neighbor down, default moves, PAT uses 203.0.113.2, /25s withdrawn; after moving DMZ HSRP by hand, www still reachable |
 | T05 | Shut Tunnel0; Istanbul routes move to Tunnel1 (route table and traceroute before/after) |
-| T06 | Chicago VPN: ISAKMP and IPsec SAs up, counters increasing, ASA shows the tunnel |
+| T06 | Chicago VPN: ISAKMP and IPsec SAs up to both edges, counters increasing, OSPF FULL on both tunnels |
 | T07 | Wrong CHAP password on TOR-RTR-01: link stays down |
 | T08 | OSPF key mismatch: adjacency drops |
 | T09 | Port-security violation: counter increments, log message |
@@ -311,19 +311,19 @@ Full procedures are in [test-plan.md](test-plan.md). Each test is recorded with 
 | T13 | Wireless client with wrong credentials rejected by RADIUS |
 | T14 | Calls London↔London and London↔each branch |
 | T15 | Syslog messages on LON-SRV-OPS-01; NTP synced on all devices |
-| T16 | INET-HOST-01 tries to reach the internal network directly: blocked by ZBF |
+| T16 | INET-HOST-01 tries to reach the internal network directly: blocked by the edge ACL |
 | T17 | LON-DMZ-WEB-01 tries to reach the internal network: blocked |
 | T18 | Cable LON-ROGUE-SW to LON-ACC-01 Fa0/24: BPDU guard err-disables the port, root unchanged, `%SPANTREE-2-BLOCK_BPDUGUARD` in Syslog |
 | T19 | Same, with BPDU guard temporarily removed on that port: root guard on the core blocks the superior BPDUs, root still unchanged |
 | T20 | Loop guard: not run, Packet Tracer has no loop guard (matrix P0-02b); kept as the production control |
 | T21 | Power off a branch switch: the other switch keeps gateways, DHCP and the WAN up for its half of the office |
 | T22 | Shut one Toronto circuit: EIGRP moves all traffic to the other, calls and pings continue |
-| T23 | Shut LON-EDGE-02's ISP-B link: Chicago's VPN re-establishes to EDGE-01 and London routes Chicago traffic there |
+| T23 | Shut Tunnel2 on LON-EDGE-01: Chicago's routes move to Tunnel1 (EDGE-02) |
 | T24 | DAI shows active with counters on the access switches (PT does not drop invalid ARP, matrix P0-05a) |
 | T25 | BGP advertisements: EDGE-01 exports only the two /25s, EDGE-02 only the /24; the internet prefers the /25s |
 | T26 | Congest one Toronto circuit during a call: drops fall in class-default, voice class is protected (demonstration, not measurement) |
 
-Simulation-mode captures (ZBF drop, IPsec encapsulation, HSRP hellos) go in the blog.
+Simulation-mode captures (firewall drop, IPsec encapsulation, HSRP hellos) go in the blog.
 
 ## 17. Documentation deliverables
 
@@ -334,7 +334,7 @@ Simulation-mode captures (ZBF drop, IPsec encapsulation, HSRP hellos) go in the 
 ## 18. Packet Tracer gotchas
 
 - 3650 switches ship without a power supply: add AC-POWER-SUPPLY.
-- Crypto and ZBF need the security license: on ISR4331 `license boot level securityk9`, on ISR2911 `license boot module c2900 technology-package securityk9`; then `write` and `reload`.
+- Crypto and the IOS firewall need the security license: on ISR4331 `license boot level securityk9`, on ISR2911 `license boot module c2900 technology-package securityk9`; then `write` and `reload`.
 - Phones and APs on 2960-24TT need a power adapter (no PoE).
 - Unsupported commands return `% Invalid input`: log them in the support matrix.
 - Large topologies are slow: disable animations, use Fast Forward Time for convergence, save after every phase.

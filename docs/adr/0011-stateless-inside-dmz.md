@@ -1,6 +1,6 @@
 # ADR 0011: Stateless policy between INSIDE and DMZ
 
-**Status:** Accepted
+**Status:** Accepted (since Phase 6 implemented with ACLs on the DMZ interface, [ADR 0015](0015-cbac-not-zbf.md))
 
 ## Context
 
@@ -8,7 +8,7 @@ The DMZ gateway is an HSRP address shared by both edges. After an ISP-A failure 
 
 ## Decision
 
-The **INSIDE ↔ DMZ zone-pairs use `pass` with tight ACLs** instead of `inspect`:
+Traffic between the inside and the DMZ is **passed statelessly with tight ACLs** instead of being inspected (first as ZBF `pass` zone-pairs, since Phase 6 as `ACL-TO-DMZ` and `ACL-DMZ-IN` on the DMZ interface):
 
 - INSIDE → DMZ: only web (80/443) and DNS to the two servers, SSH to the DMZ switch from the MGMT subnet, ping from MGMT.
 - DMZ → INSIDE: only replies to those flows (TCP `established` from the service ports, DNS responses, echo-replies).

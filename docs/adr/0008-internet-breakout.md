@@ -17,5 +17,5 @@ Istanbul and Chicago **break out locally** through their own ISP connection (wit
 
 ## Consequences
 
-- Each branch needs its own firewall policy (done with ZBF on IST-RTR-01 and the ASA in Chicago).
+- Each branch needs its own firewall policy (done with CBAC and an inbound ACL on IST-RTR-01 and CHI-RTR-01, ADR 0015).
 - Toronto's internet traffic uses London's edge and is covered by London's failover design.
