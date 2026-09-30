@@ -241,23 +241,25 @@ Only EDGE-01 originates the OSPF default: PT load-shares two equal E2 defaults, 
 
 ## Phase 7: security and management
 
-**Paste the `Phase 7` sections on every device that has one** (all four sites). The simulated ISP and internet devices do not have Phase 7 sections.
+**Paste the `Phase 7` sections on every device that has one** (all four sites): 21 routers and switches. The simulated ISP and internet devices do not have Phase 7 sections. The TACACS+ clients on LON-SRV-AAA-01 were entered in Phase 4 and Phase 6 ([servers.md](../configs/servers/servers.md)).
 
-From now on, console login asks for `netadmin` / `Lab-Admin-1` (see [lab-credentials.md](lab-credentials.md)).
+From now on, console login asks for `netadmin` / `Lab-Admin-1` and `enable` asks for `Lab-Enable-1` (see [lab-credentials.md](lab-credentials.md)). Paste each device in one go: a console that sits idle for 10 minutes logs out (`exec-timeout 10 0`).
+
+PT rejects `no ip http server` and `logging trap informational` on every model, and the 2960s also reject `login block-for` (B-51); the configs keep a comment in their place.
 
 **Verify:**
 
 | Command / action | Where | Expected |
 |---|---|---|
-| `ssh -l netadmin 10.10.10.11` (password `Lab-Tacacs-User-1`) | LON-MGMT-PC-01 | Logs in via TACACS+ |
-| `telnet 10.10.10.11` | LON-MGMT-PC-01 | Refused |
-| `show ntp status` | Any IOS device | `Clock is synchronized` (can take a few minutes; use Fast Forward) |
-| Services → SYSLOG | LON-SRV-OPS-01 | Messages arriving from devices |
+| `ssh -l netadmin 10.10.10.11` (password `Lab-Tacacs-User-1`) | LON-MGMT-PC-01 | Logs in via TACACS+ (`LON-ACC-01>`); the prompt can take a few seconds |
+| `telnet 10.10.10.11` | LON-MGMT-PC-01 | Connection opened and immediately closed by the switch (SSH only) |
+| `show ntp status` | Any IOS device, including the branches | `Clock is synchronized, stratum 2, reference is 10.10.80.12` (can take a few minutes) |
+| Services → SYSLOG | LON-SRV-OPS-01 | Messages from the edges and branch routers (the server keeps the last 300) |
 | `show access-lists` | CORE-01 | Hit counters increasing |
-| Ping LON-PC-FIN-01 | LON-PC-ENG-01 | **Fails** (policy) |
+| Ping LON-PC-FIN-01 | LON-PC-ENG-01 | **Fails** (policy): `Destination host unreachable` from the core |
 | Browse `http://intranet.corp.bosphorus.test` | LON-PC-ENG-01 | Works |
 
-**Screenshots:** `phase7-ssh-tacacs.png`, `phase7-syslog-server.png`, `phase7-ntp-status.png`, `phase7-acl-counters-core01.png`.
+**Screenshots:** `phase7-ssh-tacacs.png`, `phase7-syslog-server.png`, `phase7-ntp-status.png`, `phase7-acl-counters-core01.png`, plus `phase7-topology-full.png` and the close-ups `phase7-topology-part1-london-core-servers.png`, `part2-phase-notes.png`.
 
 ---
 

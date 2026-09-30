@@ -90,7 +90,7 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | 4 | London routing and first-hop redundancy | ✅ |
 | 5 | Internet edge (BGP, NAT, firewall, DMZ) | ✅ |
 | 6 | Remote sites and VPNs | ✅ |
-| 7 | Security and management | ⏳ |
+| 7 | Security and management | ✅ |
 | 8 | Wireless, voice, QoS | ⏳ |
 | 9 | Testing | ⏳ |
 | 10 | Documentation and blog | ⏳ |
