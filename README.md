@@ -104,15 +104,11 @@ Full procedures, evidence and deviations are in [test-plan.md](docs/test-plan.md
 | Result | Tests |
 |---|---|
 | ✅ Pass (16) | Core switch, EtherChannel, branch switch and Toronto circuit failures; Chicago VPN and its backup tunnel; CHAP and OSPF authentication; SSH-only management with TACACS+ and local fallback; Wi-Fi credentials; voice calls to every site; NTP and syslog; unsolicited inbound traffic; DMZ isolation; BPDU guard; BGP advertisements |
-| ⚠️ Pass with deviation (5) | ACL policy matrix and guest isolation (London Wi-Fi clients share the management VLAN, a Packet Tracer WLC limitation); ISP-A and Istanbul tunnel failover (needed the fixes below); DAI (configured, not enforced by PT) |
+| ⚠️ Pass with deviation (5) | ACL policy matrix and guest isolation (London Wi-Fi clients share the management VLAN, a Packet Tracer WLC limitation); ISP-A and Istanbul tunnel failover (needed fixes during testing); DAI (configured, not enforced by PT) |
 | Not run (4) | Port security, rogue DHCP, root guard, QoS under congestion: each already proven, or not modelled, in the Phase 0 validation |
 | n/a (1) | Loop guard: not available in Packet Tracer |
 
-What testing found and fixed:
-
-- LON-CORE-01's backup default pointed at the WAN router instead of the other core, so with ISP-A down, four of the eight London VLANs would have lost the internet. The Phase 5 failover test had used a VLAN on the other core.
-- The AAA server had the wrong TACACS+ client addresses for two branch switches, so management logins from London were rejected.
-- After reopening the lab, the IPsec session to the backup London edge could stay stuck, and a branch switch reboot err-disabled its desk ports through DHCP snooping. Both are Packet Tracer behaviours, recorded with their workarounds.
+Testing also found and fixed three configuration bugs (a misrouted backup default on LON-CORE-01, wrong TACACS+ client addresses, and a voice VLAN ACL that broke the CME config backup) and two Packet Tracer quirks; details in [test-plan.md](docs/test-plan.md#summary).
 
 ## Opening the lab
 
