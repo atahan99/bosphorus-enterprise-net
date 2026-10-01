@@ -95,7 +95,7 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | 7 | Security and management | ✅ |
 | 8 | Wireless, voice, QoS | ✅ |
 | 9 | Testing | ✅ |
-| 10 | Documentation and blog | ⏳ |
+| 10 | Documentation | ✅ |
 
 ## Test results
 
