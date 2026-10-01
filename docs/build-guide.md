@@ -313,6 +313,8 @@ Run every test in [test-plan.md](test-plan.md) and record the results there, wit
 ## Phase 10: documentation and publishing
 
 1. **Export final configs:** on each device, `show running-config`, copy the output into `configs/<site>/<HOSTNAME>.running.txt`. Also run the TFTP backup once from each IOS device to prove it works: `copy running-config tftp:` → `10.10.80.12` → accept the default filename.
+
+   **Run on 2026-10-01:** all 20 connected company routers and switches wrote their config to LON-SRV-OPS-01 (`[OK - N bytes]`), including the branches across the VPNs and the Toronto circuits. LON-VOICE-01 first timed out after one packet: ACL-VOICE-IN allowed only `eq 69`, but a TFTP transfer continues on a port the server picks; the line now permits UDP between the two hosts. LON-DMZ-SW01 can't reach the server by design (the DMZ may not open connections inside), the rogue test switch isn't cabled, and the simulated ISP devices have no route into the company network.
 2. Fill in the Phase 0 matrix rows you didn't test, and anything you learned during the build.
 3. Update the README's build-progress table and test-results summary.
 4. Finish the blog draft (kept locally in `blog/`, which is git-ignored) with the screenshots.

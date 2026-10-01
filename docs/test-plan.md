@@ -43,7 +43,7 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 
 1. **Fixed after the run: TACACS+ client addresses (T01 row 13).** LON-SRV-AAA-01 listed IST-SW-01 as `10.20.0.2` and CHI-SW-01 as `10.30.0.2`; corrected to `10.20.0.14` / `10.30.0.14`, and London MGMT then logged in to IST-SW-01 over SSH with TACACS+.
 2. **London Wi-Fi in VLAN 10 (T01 row 15, T11):** a PT limitation, matrix B-53. Guest and corporate London Wi-Fi clients are not isolated from internal networks.
-3. **Fixed during testing:** LON-CORE-01's floating static default pointed at LON-WAN-01 (T04, B-25); IST ↔ EDGE-02 IKE needs a crypto-map re-bind after reopening the .pkt (T05, B-54); a branch switch reboot err-disabled its desk ports through PT's DHCP snooping rate limit, now set explicitly to 100 pps (T21, B-55).
+3. **Fixed during testing:** LON-CORE-01's floating static default pointed at LON-WAN-01 (T04, B-25); IST ↔ EDGE-02 IKE needs a crypto-map re-bind after reopening the .pkt (T05, B-54); a branch switch reboot err-disabled its desk ports through PT's DHCP snooping rate limit, now set explicitly to 100 pps (T21, B-55); the voice VLAN ACL let CME's TFTP backup send only its first packet, now fixed (Phase 10 backup run).
 
 ---
 

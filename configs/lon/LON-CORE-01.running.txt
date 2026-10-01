@@ -1,6 +1,6 @@
 Building configuration...
 
-Current configuration : 16033 bytes
+Current configuration : 16025 bytes
 !
 version 16.3.2
 service timestamps log datetime msec
@@ -502,6 +502,18 @@ ip access-list extended ACL-FIN-IN
  deny ip any 172.16.0.0 0.15.255.255
  deny ip any 192.168.0.0 0.0.255.255
  permit ip 10.10.40.0 0.0.0.255 any
+ip access-list extended ACL-WIFI-GUEST-IN
+ remark --- control plane, DHCP, own gateway ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.70.0 0.0.0.255 10.10.70.0 0.0.0.255
+ remark --- internet only ---
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.10.70.0 0.0.0.255 any
+access-list 99 remark MGMT-SUBNET-ONLY
+access-list 99 permit 10.10.10.0 0.0.0.255
 ip access-list extended ACL-VOICE-IN
  remark --- control plane and infrastructure ---
  permit udp any host 224.0.0.102 eq 1985
@@ -518,21 +530,9 @@ ip access-list extended ACL-VOICE-IN
  permit tcp host 10.10.50.10 host 10.10.80.11 eq 49
  permit udp host 10.10.50.10 host 10.10.80.12 eq 514
  permit udp host 10.10.50.10 host 10.10.80.12 eq 123
- permit udp host 10.10.50.10 host 10.10.80.12 eq tftp
+ permit udp host 10.10.50.10 host 10.10.80.12
  remark --- no internet, no other internal access ---
  deny ip any any
-ip access-list extended ACL-WIFI-GUEST-IN
- remark --- control plane, DHCP, own gateway ---
- permit udp any host 224.0.0.102 eq 1985
- permit udp any any eq bootps
- permit icmp 10.10.70.0 0.0.0.255 10.10.70.0 0.0.0.255
- remark --- internet only ---
- deny ip any 10.0.0.0 0.255.255.255
- deny ip any 172.16.0.0 0.15.255.255
- deny ip any 192.168.0.0 0.0.255.255
- permit ip 10.10.70.0 0.0.0.255 any
-access-list 99 remark MGMT-SUBNET-ONLY
-access-list 99 permit 10.10.10.0 0.0.0.255
 !
 banner motd ^C
 Authorized access only. bosphorus-enterprise-net lab environment.
