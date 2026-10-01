@@ -37,11 +37,11 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 | T25 | BGP advertisements and inbound preference | ✅ |
 | T26 | QoS under congestion on a Toronto circuit | not run |
 
-**Phase 9 run (2026-10-01):** 16 ✅, 5 ⚠️, 4 not run, 1 n/a, no test ❌ overall (one ❌ row inside T01). Every failover test recovered and the lab was restored after each one. Restore points: `pkt/phase-9-wip1.pkt` … `wip6.pkt` (not committed).
+**Phase 9 run (2026-10-01):** 16 ✅, 5 ⚠️, 4 not run, 1 n/a, no test ❌ overall. Every failover test recovered and the lab was restored after each one. Restore points: `pkt/phase-9-wip1.pkt` … `wip6.pkt` (not committed).
 
-**Open issues found by the tests:**
+**Issues found by the tests:**
 
-1. **TACACS+ client addresses (T01 row 13):** on LON-SRV-AAA-01 → Services → AAA, change IST-SW-01 `10.20.0.2` → `10.20.0.14` and CHI-SW-01 `10.30.0.2` → `10.30.0.14` (the values in [servers.md](../configs/servers/servers.md)). Until then London MGMT can't log in to those two switches.
+1. **Fixed after the run: TACACS+ client addresses (T01 row 13).** LON-SRV-AAA-01 listed IST-SW-01 as `10.20.0.2` and CHI-SW-01 as `10.30.0.2`; corrected to `10.20.0.14` / `10.30.0.14`, and London MGMT then logged in to IST-SW-01 over SSH with TACACS+.
 2. **London Wi-Fi in VLAN 10 (T01 row 15, T11):** a PT limitation, matrix B-53. Guest and corporate London Wi-Fi clients are not isolated from internal networks.
 3. **Fixed during testing:** LON-CORE-01's floating static default pointed at LON-WAN-01 (T04, B-25); IST ↔ EDGE-02 IKE needs a crypto-map re-bind after reopening the .pkt (T05, B-54); a branch switch reboot err-disabled its desk ports through PT's DHCP snooping rate limit, now set explicitly to 100 pps (T21, B-55).
 
@@ -71,7 +71,7 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 | 10 | LON-PC-FIN-01 | LON-PC-SALES-01 | ping | ✘ | ✘ 0/4 |
 | 11 | LON-PC-FIN-01 | www.example.test | browse | ✔ | ✔ (browsed) |
 | 12 | LON-MGMT-PC-01 | LON-PC-FIN-01 | ping | ✔ | ✔ 4/4 |
-| 13 | LON-MGMT-PC-01 | 10.20.10.2 (IST-SW-01) | ssh | ✔ | **✘ (fail)**: TACACS+ rejects the login; LON-SRV-AAA-01 lists IST-SW-01 as 10.20.0.2, but its requests come from 10.20.0.14 (see Open issues) |
+| 13 | LON-MGMT-PC-01 | 10.20.10.2 (IST-SW-01) | ssh | ✔ | ✔ after fix: first run rejected (AAA server had IST-SW-01 as 10.20.0.2 instead of 10.20.0.14); corrected, then `IST-SW-01>` |
 | 14 | LON-TABLET-01 (guest) | www.example.test | browse | ✔ | ✔ (browsed) |
 | 15 | LON-TABLET-01 (guest) | 10.10.80.10 | ping | ✘ | **✔ (fail)**: tablet is in VLAN 10 (B-53) |
 | 16 | LON-LAPTOP-01 (corp) | intranet.corp.bosphorus.test | browse | ✔ | ✔ (browsed) |
@@ -112,7 +112,7 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 **Evidence:** `T01-matrix-*.png` for a few representative rows; `T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png` showing the counters above; `T01-acl-failover.png` for the repeat on IST-SW-02.
 
-**Actual:** ⚠️ Run 2026-10-01 from the CLI. Every ✘ row was blocked and every ✔ row passed, with the expected ACL counters rising (`T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png`). The first 2-packet pings of rows 1 and 12 lost both packets to ARP resolution; 4-packet re-runs passed. Deviations: row 15 passes traffic that should be blocked because London Wi-Fi clients are in VLAN 10 (matrix B-53); row 13 fails: LON-SRV-AAA-01 has IST-SW-01 registered as 10.20.0.2 (and CHI-SW-01 as 10.30.0.2), but those switches source TACACS+ from their router links 10.20.0.14 / 10.30.0.14 as documented in servers.md, so the server rejects them and IOS doesn't fall back to the local user. The 'connection refused' on 10.20.0.14 was `login block-for` Quiet Mode after the failed attempts (`%SEC_LOGIN-1-QUIET_MODE_ON` on LON-SRV-OPS-01), which is the protection working. Browse rows were checked by hand afterwards: every page loaded. Row 28 and the failover repeat are still open.
+**Actual:** ⚠️ Run 2026-10-01 from the CLI. Every ✘ row was blocked and every ✔ row passed, with the expected ACL counters rising (`T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png`). The first 2-packet pings of rows 1 and 12 lost both packets to ARP resolution; 4-packet re-runs passed. Deviations: row 15 passes traffic that should be blocked because London Wi-Fi clients are in VLAN 10 (matrix B-53); row 13 first failed: LON-SRV-AAA-01 had IST-SW-01 registered as 10.20.0.2 (and CHI-SW-01 as 10.30.0.2), but those switches source TACACS+ from their router links 10.20.0.14 / 10.30.0.14 as documented in servers.md, so the server rejects them and IOS doesn't fall back to the local user. The 'connection refused' on 10.20.0.14 was `login block-for` Quiet Mode after the failed attempts (`%SEC_LOGIN-1-QUIET_MODE_ON` on LON-SRV-OPS-01), which is the protection working. After correcting both server entries to 10.20.0.14 / 10.30.0.14, SSH with the TACACS+ password reached `IST-SW-01>`. Browse rows were checked by hand afterwards: every page loaded. Row 28 and the failover repeat are still open.
 
 ---
 
