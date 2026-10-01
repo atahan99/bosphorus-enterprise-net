@@ -22,7 +22,7 @@ The project has to show that I can:
 | GRE over IPsec, PPP/CHAP | OT zone using PT 9 industrial devices |
 | Stateful firewall (CBAC + ACLs), NAT/PAT, DMZ | |
 | Wi-Fi at every site: WLC + lightweight APs in London, autonomous APs at branches | |
-| CME voice for all four sites, QoS (if Phase 0 confirms support) | |
+| CME voice for all four sites, WAN QoS | |
 | AAA, SSH, NTP, Syslog, SNMP, TFTP backups | |
 
 ## 3. Scenario
@@ -157,7 +157,7 @@ Packet Tracer supports eBGP only: no iBGP, prefix-lists, route-maps, session pas
 - **Receive:** each ISP advertises `0.0.0.0/0` (static default to Null0 plus `network 0.0.0.0`) and the rest of the lab internet, including 192.0.2.0/24. Nothing is filtered.
 - **Transit:** London only ever announces its own block, so it can't become a transit path between the ISPs even without an outbound filter.
 
-### Egress and ingress: the key design decision
+### Egress and ingress symmetry
 
 - **Outbound:** only EDGE-01 runs `default-information originate` into OSPF (without `always`). Packet Tracer load-shares two equal E2 defaults and can't set their metric (matrix B-25), so LON-CORE-01/02 instead carry a floating static default (AD 250) towards EDGE-02.
 - **Inbound:** longest match. The internet prefers EDGE-01's /25s via ISP-A over EDGE-02's /24 via ISP-B.
@@ -266,10 +266,10 @@ Every site has the same two SSIDs:
 | One branch switch's uplink down | Routing via VLAN 900 | It keeps its gateways (no HSRP tracking in PT) and forwards over VLAN 900; traffic leaves through the other uplink |
 | One Toronto circuit down | EIGRP | All traffic on the remaining circuit |
 | LON-EDGE-01 or LON-EDGE-02 down | OSPF over the other tunnel | Istanbul and Chicago reconverge via the remaining edge |
-| LON-WAN-01 down | — | **Accepted SPOF** for Toronto (fix: terminate the second circuit on a second London router) |
-| IST-RTR-01, CHI-RTR-01, TOR-RTR-01 or a branch ISP down | — | **Accepted SPOF** per branch (fix: router/firewall HA pair, second ISP or LTE backup) |
-| LON-WLC-01 down | — | **Accepted SPOF** (fix: HA pair) |
-| LON-VOICE-01 down | — | No calls anywhere. **Accepted SPOF** (fix: CUCM cluster, SRST at branches) |
+| LON-WAN-01 down | none | **Accepted SPOF** for Toronto (fix: terminate the second circuit on a second London router) |
+| IST-RTR-01, CHI-RTR-01, TOR-RTR-01 or a branch ISP down | none | **Accepted SPOF** per branch (fix: router/firewall HA pair, second ISP or LTE backup) |
+| LON-WLC-01 down | none | **Accepted SPOF** (fix: HA pair) |
+| LON-VOICE-01 down | none | No calls anywhere. **Accepted SPOF** (fix: CUCM cluster, SRST at branches) |
 
 ## 15. Build, test and documentation
 

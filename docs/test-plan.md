@@ -112,7 +112,7 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 **Evidence:** `T01-matrix-*.png` for a few representative rows; `T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png` showing the counters above; `T01-acl-failover.png` for the repeat on IST-SW-02.
 
-**Actual:** ⚠️ Run 2026-10-01 from the CLI. Every ✘ row was blocked and every ✔ row passed, with the expected ACL counters rising (`T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png`). The first 2-packet pings of rows 1 and 12 lost both packets to ARP resolution; 4-packet re-runs passed. Deviations: row 15 passes traffic that should be blocked because London Wi-Fi clients are in VLAN 10 (matrix B-53); row 13 first failed: LON-SRV-AAA-01 had IST-SW-01 registered as 10.20.0.2 (and CHI-SW-01 as 10.30.0.2), but those switches source TACACS+ from their router links 10.20.0.14 / 10.30.0.14 as documented in servers.md, so the server rejects them and IOS doesn't fall back to the local user. The 'connection refused' on 10.20.0.14 was `login block-for` Quiet Mode after the failed attempts (`%SEC_LOGIN-1-QUIET_MODE_ON` on LON-SRV-OPS-01), which is the protection working. After correcting both server entries to 10.20.0.14 / 10.30.0.14, SSH with the TACACS+ password reached `IST-SW-01>`. Browse rows were checked by hand afterwards: every page loaded. Row 28 and the failover repeat are still open.
+**Actual:** ⚠️ Every ✘ row was blocked and every ✔ row passed, with the ACL counters rising on the expected entries (`T01-acl-*.png`); browse rows checked by hand. Deviation: row 15 is reachable because London Wi-Fi clients are in VLAN 10 (matrix B-53). Row 13 first failed because LON-SRV-AAA-01 had IST-SW-01 and CHI-SW-01 registered with the wrong source addresses (10.x.0.2 instead of 10.x.0.14); after the correction, SSH reached `IST-SW-01>`. The 'connection refused' seen in between was `login block-for` quiet mode after the failed logins. First pings of a run can be lost to ARP; 4-packet runs were used. Row 28 and the failover repeat were not run.
 
 ---
 
@@ -128,9 +128,9 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 **Expected:** a few pings lost, then replies resume. On CORE-02 `show standby brief` shows **Active for all eight VLANs**; on LON-ACC-03 (where SALES-01 is connected) `show spanning-tree vlan 30` shows Gi0/2 as root port. After CORE-01 returns, preempt makes it Active again for 10/30/60/70.
 
-**Evidence:** `T02-ping-loss.png`, `T02-standby-core02-after.png`, `T02-stp-acc01-after.png`.
+**Evidence:** `T02-ping-loss.png`, `T02-standby-core02-after.png`, `T02-stp-acc03-after.png`.
 
-**Actual:** ✅ LON-PC-SALES-01 44/50 (12% loss): six timeouts during the switchover, then 44 consecutive replies. CORE-02 Active for all eight VLANs; LON-ACC-03 VLAN 30 root port moved to Gi0/2 (the test plan's ACC-01 screenshot name is kept as `T02-stp-acc03-after.png`, the switch SALES-01 is on). After CORE-01 came back it preempted 10/30/60/70; OSPF FULL to EDGE-01, WAN-01 and CORE-02, Po1 with both members.
+**Actual:** ✅ LON-PC-SALES-01 44/50 (12% loss): six timeouts during the switchover, then replies. CORE-02 active for all eight VLANs; LON-ACC-03's VLAN 30 root port moved to Gi0/2. When CORE-01 returned it preempted 10/30/60/70, OSPF and Po1 recovered.
 
 ---
 
@@ -182,7 +182,7 @@ Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via E
 
 **Also check (matrix B-25):** before the failure, `show ip route 0.0.0.0` on LON-CORE-01 and LON-CORE-02 must show a single O*E2 path, advertised by 10.255.255.1 (EDGE-01).
 
-**Evidence:** `T04-before-*.png`, `T04-after-*.png`. **Actual:** ⚠️ (found and fixed a config bug). With ISP-A Fa0/0 shut: EDGE-01 lost its default (`Gateway of last resort is not set`), INET-CORE kept only 203.0.113.0/24 via ISP-B, IST-RTR-01 ran on Tunnel1 only, CORE-02 used its floating static to EDGE-02 and LON-PC-ENG-01 reached 192.0.2.10 as 203.0.113.2. **But CORE-01's floating static pointed at 10.255.0.14 (LON-WAN-01, which has no default), so every VLAN whose gateway is CORE-01 lost the internet (LON-PC-SALES-01 0/4).** Fixed to `ip route 0.0.0.0 0.0.0.0 10.255.0.10 250` (via CORE-02 over Vlan900, as the config comment intended); SALES-01 then 4/4 via 203.0.113.2. EDGE-01 `standby 100 priority 90` made EDGE-02 Active for the DMZ. Restore: BGP re-established without Fast Forward, B-37 re-origination, `clear ip bgp *` on EDGE-02; everything back on EDGE-01. Browsing from INET-HOST-01 before/after the DMZ move is a GUI step. By hand: INET-HOST-01 loads http://203.0.113.10 in the normal state; the browse during the failover (before and after moving the DMZ gateway) was not repeated.
+**Evidence:** `T04-before-*.png`, `T04-after-*.png`. **Actual:** ⚠️ With ISP-A Fa0/0 shut: EDGE-01 lost its default, INET-CORE kept only 203.0.113.0/24 via ISP-B, Istanbul ran on Tunnel1, and LON-PC-ENG-01 reached 192.0.2.10 as 203.0.113.2. **Bug found:** CORE-01's floating static pointed at LON-WAN-01, which has no default, so every VLAN whose gateway is CORE-01 lost the internet (LON-PC-SALES-01 0/4). Fixed to `ip route 0.0.0.0 0.0.0.0 10.255.0.10 250` (via CORE-02); SALES-01 then reached it via 203.0.113.2. Lowering EDGE-01's DMZ priority to 90 made EDGE-02 active. Restored with B-37 re-origination and `clear ip bgp *` on EDGE-02. INET-HOST-01 loads http://203.0.113.10 in the normal state; browsing during the failover was not repeated.
 
 ---
 
@@ -192,7 +192,7 @@ Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via E
 
 **Expected:** before, the path goes via 10.255.1.1 (EDGE-01); after, via 10.255.1.5 (EDGE-02), and IST-RTR-01's routes point at Tunnel1.
 
-**Evidence:** `T05-tracert-before.png`, `T05-tracert-after.png`, `T05-ist-routes-after.png`. **Actual:** ⚠️ Before: IST-PC-01 → 10.255.1.1 (EDGE-01). With Tunnel0 shut, IST-RTR-01 first lost every London route: its IKE session to EDGE-02 sat in `MM_NO_STATE (deleted)` with no encrypted packets, although keys, policies and ACLs matched and the outside ACL counted the ISAKMP packets. `clear crypto isakmp`/`sa` did nothing; re-binding `crypto map CM-WAN` on IST-RTR-01 Gi0/0/0 and then EDGE-02 Gi0/0/0 brought it up (matrix B-54). After that: routes via Tunnel1, tracert via 10.255.1.5 → 10.255.0.6 (`T05-*.png`).
+**Evidence:** `T05-tracert-before.png`, `T05-tracert-after.png`, `T05-ist-routes-after.png`. **Actual:** ⚠️ Before: via 10.255.1.1 (EDGE-01). With Tunnel0 shut, Istanbul first lost every London route: its IKE session to EDGE-02 was stuck in `MM_NO_STATE`, a PT state problem after reopening the lab (matrix B-54). Re-applying `crypto map CM-WAN` on both ends fixed it; routes then moved to Tunnel1 and the trace went via 10.255.1.5 → 10.255.0.6.
 
 ---
 
@@ -230,7 +230,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** the adjacency with EDGE-01 drops after the dead timer (`show ip ospf neighbor`); traffic reroutes via CORE-02. Restore the correct key.
 
-**Evidence:** `T08-ospf-neighbor-down.png`. **Actual:** ✅ After the dead timer LON-EDGE-01 disappeared from CORE-01's neighbors. At the same moment CORE-01's adjacencies to CORE-02 (Vlan900) and LON-WAN-01 showed EXSTART. The correct key was restored, and PT 9.0.1 then crashed in its EIGRP MD5 code (matrix B-49) before the recovery and reroute could be captured; recheck the reroute when re-running T02/T04.
+**Evidence:** `T08-ospf-neighbor-down.png`. **Actual:** ✅ After the dead timer LON-EDGE-01 disappeared from CORE-01's OSPF neighbors. The correct key was restored; PT then crashed (matrix B-49) before the reroute could be captured. The reroute itself is shown by T02 and T04.
 
 ---
 
@@ -286,7 +286,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Restore:** turn the AAA service back on.
 
-**Evidence:** `T12-telnet-refused.png`, `T12-ssh-tacacs.png`, `T12-ssh-local-fallback.png`. **Actual:** ✅ By hand on LON-MGMT-PC-01: `telnet 10.10.10.11` refused; with the TACACS+ server up, `Lab-Tacacs-User-1` accepted and the local `Lab-Admin-1` rejected; with the AAA service off, `Lab-Admin-1` accepted (local fallback); from LON-PC-ENG-01 the SSH attempt fails. Branch switch management (T01 row 13) fails separately.
+**Evidence:** `T12-telnet-refused.png`, `T12-ssh-tacacs.png`, `T12-ssh-local-fallback.png`. **Actual:** ✅ By hand from LON-MGMT-PC-01: telnet refused; with TACACS+ up, the TACACS+ password is accepted and the local one rejected; with the AAA service off, the local password works (fallback); SSH from LON-PC-ENG-01 fails.
 
 ---
 
@@ -392,7 +392,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** power IST-SW-01 back on; it pre-empts VLANs 10, 20, 60.
 
-**Evidence:** `T21-ping-loss.png`, `T21-standby-sw02.png`, `T21-dhcp-upper-half.png`. **Actual:** ✅ IST-PC-02 37/40 (8% loss) with IST-SW-01 powered off; IST-SW-02 Active for VLANs 10/20/50/60/70; renewed lease 10.20.20.176 from IST-SW-02's upper-half scope; 192.0.2.10 reachable (3/4, first lost to ARP) via IST-SW-02's own router link. IST-SW-01 preempted 10/20/60 when powered back on. Found afterwards: the reboot had err-disabled Gi1/0/1–2 (IST-PC-01, IST-PH-01) through PT's built-in DHCP snooping rate limit; fixed with `ip dhcp snooping limit rate 100` on every branch access port (matrix B-55).
+**Evidence:** `T21-ping-loss.png`, `T21-standby-sw02.png`, `T21-dhcp-upper-half.png`. **Actual:** ✅ IST-PC-02 37/40 (8% loss) with IST-SW-01 powered off; IST-SW-02 active for every VLAN; renewed lease 10.20.20.176 from IST-SW-02's upper-half scope; internet reachable through IST-SW-02's own router link. IST-SW-01 preempted 10/20/60 when back. Found afterwards: the reboot had err-disabled IST-SW-01's PC and phone ports through PT's DHCP snooping rate limit; fixed with `ip dhcp snooping limit rate 100` on every branch access port (matrix B-55).
 
 ---
 
