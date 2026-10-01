@@ -1,0 +1,184 @@
+Building configuration...
+
+Current configuration : 2466 bytes
+!
+version 12.4
+service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname LON-VOICE-01
+!
+login block-for 120 attempts 3 within 60
+!
+!
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+!
+!
+!
+aaa new-model
+!
+aaa authentication login CONSOLE local 
+aaa authentication login default group tacacs+ local 
+!
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+username netadmin privilege 15 secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+ip ssh time-out 60
+no ip domain-lookup
+ip domain-name corp.bosphorus.test
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ description TO-LON-SRV-SW01-Fa0/5
+ ip address 10.10.50.10 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 10.10.50.1 
+!
+ip flow-export version 9
+!
+!
+ip access-list extended sl_def_acl
+ deny tcp any any eq telnet
+ deny tcp any any eq www
+ deny tcp any any eq 22
+ permit tcp any any eq 22
+access-list 99 remark MGMT-SUBNET-ONLY
+access-list 99 permit 10.10.10.0 0.0.0.255
+!
+banner motd ^C
+Authorized access only. bosphorus-enterprise-net lab environment.
+All activity is logged.
+^C
+!
+tacacs-server host 10.10.80.11 key Lab-Tacacs-1
+!
+!
+!
+snmp-server community BSP-RO-Lab RO
+!
+logging 10.10.80.12
+telephony-service
+ max-ephones 20
+ max-dn 20
+ ip source-address 10.10.50.10 port 2000
+ auto assign 1 to 8
+!
+ephone-dn 1
+ number 1001
+!
+ephone-dn 2
+ number 1002
+!
+ephone-dn 3
+ number 1003
+!
+ephone-dn 4
+ number 1004
+!
+ephone-dn 5
+ number 1005
+!
+ephone-dn 6
+ number 1006
+!
+ephone-dn 7
+ number 1007
+!
+ephone-dn 8
+ number 1008
+!
+ephone 1
+ device-security-mode none
+ mac-address 0006.2A49.5D22
+ type 7960
+ button 1:1
+!
+ephone 2
+ device-security-mode none
+ mac-address 00D0.583A.1982
+ type 7960
+ button 1:2
+!
+ephone 3
+ device-security-mode none
+ mac-address 00D0.BA92.4B3D
+ type 7960
+ button 1:3
+!
+ephone 4
+ device-security-mode none
+ mac-address 0090.0C82.729A
+ type 7960
+ button 1:4
+!
+ephone 5
+ device-security-mode none
+ mac-address 0009.7CAA.9A5C
+ type 7960
+ button 1:5
+!
+line con 0
+ logging synchronous
+ login authentication CONSOLE
+!
+line aux 0
+!
+line vty 0 4
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+!
+!
+ntp authentication-key 1 md5 080D4D4C443711075F5A 7
+ntp authenticate
+ntp trusted-key 1
+ntp server 10.10.80.12 key 1
+!
+end
+
+
+

@@ -8,9 +8,9 @@ Every secret in this lab, in one place. **These are lab-only values**, published
 | Local admin (fallback) | `netadmin` / `Lab-Admin-1` | All IOS devices |
 | TACACS+ admin | `netadmin` / `Lab-Tacacs-User-1` | LON-SRV-AAA-01; used whenever the AAA server is reachable |
 | TACACS+ shared key | `Lab-Tacacs-1` | Devices ↔ LON-SRV-AAA-01 |
-| RADIUS shared key | `Lab-Radius-1` | LON-WLC-01 and branch corporate APs ↔ LON-SRV-AAA-01 |
-| Corporate Wi-Fi users | `wifi-user1` / `Lab-Wifi-1`, `wifi-user2` / `Lab-Wifi-2`, `wifi-user3` / `Lab-Wifi-3` | `BSP-CORP` (WPA2-Enterprise) |
-| Corporate Wi-Fi PSK (branch fallback only) | `Lab-Corp-Wifi-1` | Branch `BSP-CORP` APs, only if AccessPoint-PT can't do WPA2-Enterprise |
+| RADIUS shared key | `Lab-Radius-1` | LON-WLC-01 ↔ LON-SRV-AAA-01 (port 1812) |
+| Corporate Wi-Fi users | `wifi-user1` / `Lab-Wifi-1`, `wifi-user2` / `Lab-Wifi-2`, `wifi-user3` / `Lab-Wifi-3` | London `BSP-CORP` (WPA2-Enterprise) |
+| Corporate Wi-Fi PSK | `Lab-Corp-Wifi-1` | Branch `BSP-CORP` APs (AccessPoint-PT has no RADIUS) |
 | Guest Wi-Fi PSK | `Lab-Guest-Wifi-1` | `BSP-GUEST` at every site |
 | WLC admin | `wlcadmin` / `Lab-Wlc-1` | LON-WLC-01 web GUI |
 | OSPF MD5 key 1 | `Lab-Ospf-1` | All OSPF interfaces |

@@ -17,13 +17,16 @@ Tips:
 - Packet Tracer can be slow with long pastes. If lines seem to be dropped, paste in smaller chunks.
 - Use **Fast Forward Time** (bottom-left) to skip waiting for STP, OSPF and BGP to converge.
 - Turn off packet animation in Simulation mode except when capturing screenshots.
+- 3650 switches ship without a power supply (add AC-POWER-SUPPLY); phones and APs on the 2960-24TT need a power adapter (no PoE).
+- `.pkt` files are not backward-compatible: open the lab with Packet Tracer 9.0.1 or newer.
+- `copy running-config startup-config` on every device before saving the `.pkt`.
 
 ## After every phase
 
 - Add a visible note box to the workspace with the phase number, site/subnet scope, active protocols and any Packet Tracer fallback used. Keep notes clear of devices and links.
 - Save a phase checkpoint as `pkt/phase-N.pkt`, then also refresh `pkt/bosphorus-enterprise-net.pkt` as the latest canonical copy.
-- Take the listed screenshots and save them in `screenshots/` with the given names. Capture the whole canvas as `phaseN-topology-full.png` **and** close-ups of the areas the phase touched as `phaseN-topology-part1-<area>.png`, `part2-…`, and so on: the whole workspace is too large to read on its own, and the MCP's single-image capture fails once it exceeds the bridge's transfer limit.
-- If this folder is a Git repository, commit and tag: `git add -A && git commit -m "Phase N: <summary>" && git tag phase-N`. If it is not, initialize Git once before Phase 0 or skip the Git checkpoint; saving the `.pkt` remains required.
+- Take the listed screenshots and save them in `screenshots/` with the given names. Capture the whole canvas as `phaseN-topology-full.png` **and** close-ups of the areas the phase touched as `phaseN-topology-part1-<area>.png`, `part2-…`, and so on: the whole workspace is too large to read on its own.
+- Commit and tag: `git commit -m "Phase N: <summary>" && git tag phase-N`.
 
 ---
 
@@ -37,7 +40,7 @@ Follow [`phase0/phase0-feature-tests.md`](../phase0/phase0-feature-tests.md) bef
 
 ## Phase 2: place and cable
 
-**MCP preflight:** in a throwaway file, place one of each distinct model, install the planned modules, and create one representative link per interface family. Confirm the interface names accepted by the MCP before placing the production devices. In particular, verify the 3650 uplinks, ASA interfaces and Router-PT expansion interfaces; the MCP catalog may name them differently from the Packet Tracer GUI. Delete the throwaway file only after recording any mapping changes in the cabling plan.
+**If you automate with the MCP:** its device catalog names some ports differently from the GUI (3650, Router-PT). Use the live names in the [cabling plan appendix](cabling-plan.md#appendix-port-names-for-mcp-automation-checked-2026-09-29).
 
 **GUI:**
 
@@ -143,7 +146,7 @@ Po1 should come up as `(SU)` with both members `(P)` within a few seconds.
 
 ## Phase 4: London routing, HSRP, DHCP
 
-**GUI:** configure LON-SRV-CORE-01, LON-SRV-AAA-01, LON-SRV-OPS-01 and LON-SRV-INTRA-01 from [servers.md](../configs/servers/servers.md). Set the London PCs and printer from [wireless-and-endpoints.md](../configs/servers/wireless-and-endpoints.md#pcs-and-printer).
+**GUI:** configure LON-SRV-CORE-01, LON-SRV-AAA-01, LON-SRV-OPS-01 and LON-SRV-INTRA-01 from [servers.md](../configs/servers/servers.md). Set the London PCs and printer from [wireless-and-endpoints.md](../configs/servers/wireless-and-endpoints.md#pcs-and-printers).
 
 **Paste `Phase 4` sections on:** LON-CORE-01, LON-CORE-02, LON-EDGE-01, LON-EDGE-02, LON-WAN-01.
 
@@ -302,6 +305,8 @@ PT rejects `no ip http server` and `logging trap informational` on every model, 
 ## Phase 9: testing
 
 Run every test in [test-plan.md](test-plan.md) and record the results there, with screenshots named by test ID.
+
+**After reopening the `.pkt`, before any failover test:** on LON-EDGE-01 re-enter `default-information originate` under `router ospf 1` (B-37), and run `show crypto isakmp sa` on both London edges. If a branch session shows `MM_NO_STATE`, re-apply `crypto map CM-WAN` on that branch router's and that edge's outside interface (B-54).
 
 ---
 

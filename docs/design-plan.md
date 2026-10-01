@@ -234,12 +234,12 @@ Every site has the same two SSIDs:
 
 | SSID | Security | VLAN | Access |
 |---|---|---|---|
-| `BSP-CORP` | WPA2-Enterprise (RADIUS on LON-SRV-AAA-01) | 60 | Internal + internet |
+| `BSP-CORP` | WPA2-Enterprise (RADIUS on LON-SRV-AAA-01) in London; WPA2-PSK at the branches | 60 | Internal + internet |
 | `BSP-GUEST` | WPA2-PSK | 70 | Internet only (ACL on the gateway) |
 
-**London:** LON-WLC-01 (WLC-3504), management 10.10.10.20, trunk to LON-CORE-01 carrying VLANs 10, 60, 70, with dynamic interfaces for 60 and 70. Four lightweight APs (one per access switch) on VLAN 10 ports, joining via DHCP option 43 and CAPWAP.
+**London:** LON-WLC-01 (WLC-3504), management 10.10.10.20, trunk to LON-CORE-01 carrying VLANs 10, 60, 70, with dynamic interfaces for 60 and 70 (as built, PT can't trunk the WLC uplink, so London Wi-Fi clients land in VLAN 10: [matrix B-53](pt-support-matrix.md)). Four lightweight APs (one per access switch) on VLAN 10 ports, joining via DHCP option 43 and CAPWAP.
 
-**Branches:** autonomous APs (AccessPoint-PT), one per SSID and one per switch, each bridging its SSID into the site's VLAN 60 or 70 ([ADR 0013](adr/0013-branch-wifi-autonomous-aps.md)). This is a representative functional layout, not production capacity sizing. Wireless traffic stays local, so branch Wi-Fi keeps working if the WAN is down; only corporate authentication depends on the RADIUS server in London. If Packet Tracer's AccessPoint-PT can't do WPA2-Enterprise, the corporate SSID falls back to WPA2-PSK and the gap is recorded.
+**Branches:** autonomous APs (AccessPoint-PT), one per SSID and one per switch, each bridging its SSID into the site's VLAN 60 or 70 ([ADR 0013](adr/0013-branch-wifi-autonomous-aps.md)). This is a representative functional layout, not production capacity sizing. Wireless traffic stays local, so branch Wi-Fi keeps working if the WAN is down. AccessPoint-PT has no RADIUS option, so the branch corporate SSID uses WPA2-PSK (matrix B-14).
 
 **Clients:** laptop and smartphone on corp and a tablet on guest in London; a laptop (corp) and tablet (guest) at each branch; plus one deliberate authentication failure.
 
@@ -247,12 +247,11 @@ Every site has the same two SSIDs:
 
 ## 13. Voice and QoS
 
-**Voice:** LON-VOICE-01 (2811) runs CME for the whole company: `telephony-service`, `max-ephone`, `max-dn`, `ip source-address 10.10.50.10 port 2000`, `auto assign`, eight `ephone-dn`s (1001–1008). Every site has a voice VLAN whose DHCP scope points phones at CME (option 150): three phones in London and one at each branch, registering across the VPNs and the Toronto circuits. Tests: London↔London, and London↔each branch. Production would size CME/CUCM for ~180 phones and add SRST at the branches so they can still call locally when the WAN is down.
+**Voice:** LON-VOICE-01 (2811) runs CME for the whole company: `telephony-service`, `max-ephone`, `max-dn`, `ip source-address 10.10.50.10 port 2000`, `auto assign`, eight `ephone-dn`s (1001–1008). Every site has a voice VLAN whose DHCP scope points phones at CME (option 150): three phones in London and one at each branch, registering across the VPNs and the Toronto circuits (as built, the London lobby phone doesn't complete DHCP: matrix B-52). Tests: London↔London, and London↔each branch. Production would size CME/CUCM for ~180 phones and add SRST at the branches so they can still call locally when the WAN is down.
 
-**QoS** (depends on Phase 0):
+**QoS** (MQC, validated in Phase 0 as P0-17):
 
-- If PT supports MQC on the routers: marking on LAN-facing router inputs (`PM-MARK-IN`, by ACL: phone RTP → EF, SCCP → CS3, branch ↔ server traffic → AF31, guest Wi-Fi → CS1), and queuing on WAN outputs (`PM-WAN-OUT`: EF priority 10%, CS3 5%, AF31 20%, CS1 1%, default fair-queue). Applied on both edges, LON-WAN-01, IST-RTR-01 and TOR-RTR-01. Classification is by ACL because switch trust and NBAR are likely missing in PT.
-- If not: the design stays in this section and the QoS configs move to `configs/_design-only/`, clearly labelled as not validated in PT.
+- Marking on LAN-facing router inputs (`PM-MARK-IN`, by ACL: phone RTP → EF, SCCP → CS3, branch ↔ server traffic → AF31, guest Wi-Fi → CS1), and queuing on WAN outputs (`PM-WAN-OUT`: EF priority 10%, CS3 5%, AF31 20%, CS1 1%, default fair-queue). Applied on both edges, LON-WAN-01 and all three branch routers. Classification is by ACL because switch trust and NBAR are missing in PT.
 
 ## 14. Redundancy summary
 
@@ -272,71 +271,6 @@ Every site has the same two SSIDs:
 | LON-WLC-01 down | — | **Accepted SPOF** (fix: HA pair) |
 | LON-VOICE-01 down | — | No calls anywhere. **Accepted SPOF** (fix: CUCM cluster, SRST at branches) |
 
-## 15. Build phases
+## 15. Build, test and documentation
 
-Save the `.pkt` and tag the repo at the end of every phase.
-
-| # | Phase | Done when | Est. |
-|---|---|---|---|
-| 0 | Feature validation ([procedure](../phase0/phase0-feature-tests.md)) | Every row in the support matrix is marked | 2–3 h |
-| 1 | Design docs and diagrams | Addressing has no overlaps; diagrams match the tables | 3 h |
-| 2 | Place and cable | Checklist in [cabling-plan.md §5](cabling-plan.md#5-done-when-for-phase-2) | 2–3 h |
-| 3 | London switching | `show spanning-tree`, `show etherchannel summary`, `show interfaces trunk` as designed | 4 h |
-| 4 | London routing and FHRP | Every London VLAN gets DHCP and reaches the servers | 4 h |
-| 5 | Internet edge | Inside PC reaches 192.0.2.10; INET-HOST-01 reaches www via 203.0.113.10; edge failover works | 6 h |
-| 6 | Remote sites and VPNs | Full site-to-site reachability; IPsec counters increasing | 6 h |
-| 7 | Security and management | ACL matrix tests pass; Syslog receiving; NTP synced | 5 h |
-| 8 | Wireless, voice, QoS | APs joined; corp/guest behave as designed; calls work | 5 h |
-| 9 | Testing | All tests pass or deviations documented | 5 h |
-| 10 | Docs and publishing | Repo public, blog published | 8–10 h |
-
-## 16. Test plan
-
-Full procedures are in [test-plan.md](test-plan.md). Each test is recorded with ID, purpose, procedure, expected result, actual result and screenshot filename (`screenshots/Txx-*.png`).
-
-| ID | Test |
-|---|---|
-| T01 | Inter-VLAN and inter-site policy matrix: every cell in §10 checked with ping or HTTP, with ACL hit counters on the London cores and branch switches |
-| T02 | Power off LON-CORE-01 during a continuous ping; HSRP and STP take over; count lost pings |
-| T03 | Shut one Po1 member; zero loss |
-| T04 | Shut the ISP-A link: BGP neighbor down, default moves, PAT uses 203.0.113.2, /25s withdrawn; after moving DMZ HSRP by hand, www still reachable |
-| T05 | Shut Tunnel0; Istanbul routes move to Tunnel1 (route table and traceroute before/after) |
-| T06 | Chicago VPN: ISAKMP and IPsec SAs up to both edges, counters increasing, OSPF FULL on both tunnels |
-| T07 | Wrong CHAP password on TOR-RTR-01: link stays down |
-| T08 | OSPF key mismatch: adjacency drops |
-| T09 | Port-security violation: counter increments, log message |
-| T10 | Rogue DHCP server on an access port: clients ignore it (snooping bindings as evidence) |
-| T11 | Guest wireless clients (London and a branch): internet works, 10.0.0.0/8 unreachable |
-| T12 | Telnet refused, SSH works; AAA server off → local fallback works |
-| T13 | Wireless client with wrong credentials rejected by RADIUS |
-| T14 | Calls London↔London and London↔each branch |
-| T15 | Syslog messages on LON-SRV-OPS-01; NTP synced on all devices |
-| T16 | INET-HOST-01 tries to reach the internal network directly: blocked by the edge ACL |
-| T17 | LON-DMZ-WEB-01 tries to reach the internal network: blocked |
-| T18 | Cable LON-ROGUE-SW to LON-ACC-01 Fa0/24: BPDU guard err-disables the port, root unchanged, `%SPANTREE-2-BLOCK_BPDUGUARD` in Syslog |
-| T19 | Same, with BPDU guard temporarily removed on that port: root guard on the core blocks the superior BPDUs, root still unchanged |
-| T20 | Loop guard: not run, Packet Tracer has no loop guard (matrix P0-02b); kept as the production control |
-| T21 | Power off a branch switch: the other switch keeps gateways, DHCP and the WAN up for its half of the office |
-| T22 | Shut one Toronto circuit: EIGRP moves all traffic to the other, calls and pings continue |
-| T23 | Shut Tunnel2 on LON-EDGE-01: Chicago's routes move to Tunnel1 (EDGE-02) |
-| T24 | DAI shows active with counters on the access switches (PT does not drop invalid ARP, matrix P0-05a) |
-| T25 | BGP advertisements: EDGE-01 exports only the two /25s, EDGE-02 only the /24; the internet prefers the /25s |
-| T26 | Congest one Toronto circuit during a call: drops fall in class-default, voice class is protected (demonstration, not measurement) |
-
-Simulation-mode captures (firewall drop, IPsec encapsulation, HSRP hellos) go in the blog.
-
-## 17. Documentation deliverables
-
-- **README:** summary and hero diagram, features table, diagrams, addressing summary, how to open, test results, PT limitations, repo map.
-- **Diagrams** ([`diagrams/`](../diagrams/), Mermaid so GitHub renders them): site overview; L2 VLANs, trunks, STP roots and blocked ports; L3 addressing, OSPF areas, EIGRP domain, BGP ASes; security zones; VPN overlay; wireless.
-- **Blog** (drafted locally in `blog/`, git-ignored): "Building a four-site enterprise network in Packet Tracer, and what the simulator can't do." Sections: why rebuild without hardware; the scenario; three design problems (asymmetric NAT with two ISPs, the IPsec NAT exemption, integrating the EIGRP site); attacking my own Layer 2; break-it testing; the support matrix; what production would change (IKEv2/VTI, SD-WAN, 802.1X everywhere, SNMPv3, CoPP, VRRP).
-
-## 18. Packet Tracer gotchas
-
-- 3650 switches ship without a power supply: add AC-POWER-SUPPLY.
-- Crypto and the IOS firewall need the security license: on ISR4331 `license boot level securityk9`, on ISR2911 `license boot module c2900 technology-package securityk9`; then `write` and `reload`.
-- Phones and APs on 2960-24TT need a power adapter (no PoE).
-- Unsupported commands return `% Invalid input`: log them in the support matrix.
-- Large topologies are slow: disable animations, use Fast Forward Time for convergence, save after every phase.
-- `.pkt` files aren't backward-compatible: pin the PT build in the README.
-- `copy running-config startup-config` on every device before saving the `.pkt`.
+The lab was built in ten phases, each ending with a saved `.pkt` checkpoint and a Git tag: [build-guide.md](build-guide.md) has the steps and verification commands. The 26 tests, with procedures and results, are in [test-plan.md](test-plan.md). Everything Packet Tracer couldn't do, and the fallback used, is in [pt-support-matrix.md](pt-support-matrix.md).

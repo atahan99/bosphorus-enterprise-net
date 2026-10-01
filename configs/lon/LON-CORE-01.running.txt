@@ -1,0 +1,575 @@
+Building configuration...
+
+Current configuration : 16033 bytes
+!
+version 16.3.2
+service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname LON-CORE-01
+!
+login block-for 120 attempts 3 within 60
+!
+no profinet
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+!
+!
+!
+aaa new-model
+!
+aaa authentication login CONSOLE local 
+aaa authentication login default group tacacs+ local 
+!
+!
+!
+!
+!
+!
+!
+ip cef
+ip routing
+!
+no ipv6 cef
+!
+!
+!
+username netadmin privilege 15 secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+ip ssh time-out 60
+no ip domain-lookup
+ip domain-name corp.bosphorus.test
+!
+!
+vtp domain BOSPHORUS
+vtp mode transparent
+!
+spanning-tree mode rapid-pvst
+spanning-tree vlan 10,30,60,70,900,999 priority 24576
+spanning-tree vlan 20,40,50,80 priority 28672
+!
+!
+!
+!
+!
+!
+vlan 10
+ name MGMT
+!
+vlan 20
+ name ENG
+!
+vlan 30
+ name SALES
+!
+vlan 40
+ name FIN-HR
+!
+vlan 50
+ name VOICE
+!
+vlan 60
+ name WIFI-CORP
+!
+vlan 70
+ name WIFI-GUEST
+!
+vlan 80
+ name SERVERS
+!
+vlan 900
+ name TRANSIT
+!
+vlan 998
+ name PARKING
+!
+vlan 999
+ name NATIVE-UNUSED
+!
+interface Loopback0
+ ip address 10.255.255.3 255.255.255.255
+!
+interface Port-channel1
+ description TO-LON-CORE-02-Po1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,900,999
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/1
+ description TO-LON-ACC-01-Gi0/1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,50,999
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree guard root
+!
+interface GigabitEthernet1/0/2
+ description TO-LON-ACC-02-Gi0/1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,50,999
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree guard root
+!
+interface GigabitEthernet1/0/3
+ description TO-LON-ACC-03-Gi0/1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,30,50,999
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree guard root
+!
+interface GigabitEthernet1/0/4
+ description TO-LON-ACC-04-Gi0/1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,30,40,50,999
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree guard root
+!
+interface GigabitEthernet1/0/5
+ description TO-LON-SRV-SW01-Gi0/1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,50,80,999
+ switchport mode trunk
+ switchport nonegotiate
+ spanning-tree guard root
+!
+interface GigabitEthernet1/0/6
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/7
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/8
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/9
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/10
+ description TO-LON-WLC-01-Gi1
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 10,60,70,999
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/11
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/12
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/13
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/14
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/15
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/16
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/17
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/18
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/19
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/20
+ description TO-LON-EDGE-01-Gi0/0/1
+ no switchport
+ ip address 10.255.0.2 255.255.255.252
+ ip ospf message-digest-key 1 md5 Lab-Ospf-1
+ ip ospf network point-to-point
+ ip ospf priority 1
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet1/0/21
+ description TO-LON-WAN-01-Gi0/0/1
+ no switchport
+ ip address 10.255.0.13 255.255.255.252
+ ip ospf message-digest-key 1 md5 Lab-Ospf-1
+ ip ospf network point-to-point
+ ip ospf priority 1
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet1/0/22
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/23
+ description TO-LON-CORE-02-Po1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,900,999
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
+!
+interface GigabitEthernet1/0/24
+ description TO-LON-CORE-02-Po1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,900,999
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
+!
+interface GigabitEthernet1/1/1
+ shutdown
+!
+interface GigabitEthernet1/1/2
+ shutdown
+!
+interface GigabitEthernet1/1/3
+ shutdown
+!
+interface GigabitEthernet1/1/4
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan10
+ description MGMT
+ mac-address 00d0.5845.9c01
+ ip address 10.10.10.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ standby version 2
+ standby 10 ip 10.10.10.1
+ standby 10 priority 110
+ standby 10 preempt
+!
+interface Vlan20
+ description ENG
+ mac-address 00d0.5845.9c02
+ ip address 10.10.20.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-ENG-IN in
+ standby version 2
+ standby 20 ip 10.10.20.1
+ standby 20 preempt
+!
+interface Vlan30
+ description SALES
+ mac-address 00d0.5845.9c03
+ ip address 10.10.30.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-SALES-IN in
+ standby version 2
+ standby 30 ip 10.10.30.1
+ standby 30 priority 110
+ standby 30 preempt
+!
+interface Vlan40
+ description FIN-HR
+ mac-address 00d0.5845.9c04
+ ip address 10.10.40.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-FIN-IN in
+ standby version 2
+ standby 40 ip 10.10.40.1
+ standby 40 preempt
+!
+interface Vlan50
+ description VOICE
+ mac-address 00d0.5845.9c05
+ ip address 10.10.50.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-VOICE-IN in
+ standby version 2
+ standby 50 ip 10.10.50.1
+ standby 50 preempt
+!
+interface Vlan60
+ description WIFI-CORP
+ mac-address 00d0.5845.9c06
+ ip address 10.10.60.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-WIFI-CORP-IN in
+ standby version 2
+ standby 60 ip 10.10.60.1
+ standby 60 priority 110
+ standby 60 preempt
+!
+interface Vlan70
+ description WIFI-GUEST
+ mac-address 00d0.5845.9c07
+ ip address 10.10.70.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-WIFI-GUEST-IN in
+ standby version 2
+ standby 70 ip 10.10.70.1
+ standby 70 priority 110
+ standby 70 preempt
+!
+interface Vlan80
+ description SERVERS
+ mac-address 00d0.5845.9c08
+ ip address 10.10.80.2 255.255.255.0
+ standby version 2
+ standby 80 ip 10.10.80.1
+ standby 80 preempt
+!
+interface Vlan900
+ description TRANSIT-TO-LON-CORE-02
+ mac-address 00d0.5845.9c09
+ ip address 10.255.0.9 255.255.255.252
+ ip ospf message-digest-key 1 md5 Lab-Ospf-1
+!
+router ospf 1
+ router-id 10.255.255.3
+ log-adjacency-changes
+ area 0 authentication message-digest
+ passive-interface default
+ no passive-interface GigabitEthernet1/0/20
+ no passive-interface GigabitEthernet1/0/21
+ no passive-interface Vlan900
+ auto-cost reference-bandwidth 10000
+ network 10.10.0.0 0.0.255.255 area 0
+ network 10.255.0.0 0.0.0.255 area 0
+ network 10.255.255.3 0.0.0.0 area 0
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 10.255.0.10 250
+!
+ip flow-export version 9
+!
+!
+ip access-list extended sl_def_acl
+ deny tcp any any eq telnet
+ deny tcp any any eq www
+ deny tcp any any eq 22
+ permit tcp any any eq 22
+ip access-list extended ACL-ENG-IN
+ remark --- control plane and infrastructure ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.20.0 0.0.0.255 10.10.20.0 0.0.0.255
+ remark --- return traffic for sessions opened from MGMT ---
+ permit tcp 10.10.20.0 0.0.0.255 10.10.10.0 0.0.0.255 established
+ permit icmp 10.10.20.0 0.0.0.255 10.10.10.0 0.0.0.255 echo-reply
+ remark --- servers: DNS, intranet, mail, ping ---
+ permit udp 10.10.20.0 0.0.0.255 host 10.10.80.10 eq domain
+ permit tcp 10.10.20.0 0.0.0.255 host 10.10.80.13 eq www
+ permit tcp 10.10.20.0 0.0.0.255 host 10.10.80.13 eq 443
+ permit tcp 10.10.20.0 0.0.0.255 host 10.10.80.13 eq smtp
+ permit tcp 10.10.20.0 0.0.0.255 host 10.10.80.13 eq pop3
+ permit icmp 10.10.20.0 0.0.0.255 10.10.80.0 0.0.0.255 echo
+ remark --- public website in the DMZ (internal DNS resolves www to 172.16.100.10) ---
+ permit tcp 10.10.20.0 0.0.0.255 host 172.16.100.10 eq www
+ permit tcp 10.10.20.0 0.0.0.255 host 172.16.100.10 eq 443
+ remark --- peer user VLANs, branch user and branch corporate Wi-Fi subnets ---
+ permit ip 10.10.20.0 0.0.0.255 10.10.30.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.10.60.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.20.20.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.30.20.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.40.20.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.20.60.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.30.60.0 0.0.0.255
+ permit ip 10.10.20.0 0.0.0.255 10.40.60.0 0.0.0.255
+ remark --- all other internal and private space denied, internet allowed ---
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.10.20.0 0.0.0.255 any
+ip access-list extended ACL-SALES-IN
+ remark --- control plane and infrastructure ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.30.0 0.0.0.255 10.10.30.0 0.0.0.255
+ remark --- return traffic for sessions opened from MGMT ---
+ permit tcp 10.10.30.0 0.0.0.255 10.10.10.0 0.0.0.255 established
+ permit icmp 10.10.30.0 0.0.0.255 10.10.10.0 0.0.0.255 echo-reply
+ remark --- servers: DNS, intranet, mail, ping ---
+ permit udp 10.10.30.0 0.0.0.255 host 10.10.80.10 eq domain
+ permit tcp 10.10.30.0 0.0.0.255 host 10.10.80.13 eq www
+ permit tcp 10.10.30.0 0.0.0.255 host 10.10.80.13 eq 443
+ permit tcp 10.10.30.0 0.0.0.255 host 10.10.80.13 eq smtp
+ permit tcp 10.10.30.0 0.0.0.255 host 10.10.80.13 eq pop3
+ permit icmp 10.10.30.0 0.0.0.255 10.10.80.0 0.0.0.255 echo
+ remark --- public website in the DMZ (internal DNS resolves www to 172.16.100.10) ---
+ permit tcp 10.10.30.0 0.0.0.255 host 172.16.100.10 eq www
+ permit tcp 10.10.30.0 0.0.0.255 host 172.16.100.10 eq 443
+ remark --- peer user VLANs, branch user and branch corporate Wi-Fi subnets ---
+ permit ip 10.10.30.0 0.0.0.255 10.10.20.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.10.60.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.20.20.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.30.20.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.40.20.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.20.60.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.30.60.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 10.40.60.0 0.0.0.255
+ remark --- all other internal and private space denied, internet allowed ---
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.10.30.0 0.0.0.255 any
+ip access-list extended ACL-WIFI-CORP-IN
+ remark --- control plane and infrastructure ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.60.0 0.0.0.255 10.10.60.0 0.0.0.255
+ remark --- return traffic for sessions opened from MGMT ---
+ permit tcp 10.10.60.0 0.0.0.255 10.10.10.0 0.0.0.255 established
+ permit icmp 10.10.60.0 0.0.0.255 10.10.10.0 0.0.0.255 echo-reply
+ remark --- servers: DNS, intranet, mail, ping ---
+ permit udp 10.10.60.0 0.0.0.255 host 10.10.80.10 eq domain
+ permit tcp 10.10.60.0 0.0.0.255 host 10.10.80.13 eq www
+ permit tcp 10.10.60.0 0.0.0.255 host 10.10.80.13 eq 443
+ permit tcp 10.10.60.0 0.0.0.255 host 10.10.80.13 eq smtp
+ permit tcp 10.10.60.0 0.0.0.255 host 10.10.80.13 eq pop3
+ permit icmp 10.10.60.0 0.0.0.255 10.10.80.0 0.0.0.255 echo
+ remark --- public website in the DMZ (internal DNS resolves www to 172.16.100.10) ---
+ permit tcp 10.10.60.0 0.0.0.255 host 172.16.100.10 eq www
+ permit tcp 10.10.60.0 0.0.0.255 host 172.16.100.10 eq 443
+ remark --- peer user VLANs, branch user and branch corporate Wi-Fi subnets ---
+ permit ip 10.10.60.0 0.0.0.255 10.10.20.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.10.30.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.20.20.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.30.20.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.40.20.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.20.60.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.30.60.0 0.0.0.255
+ permit ip 10.10.60.0 0.0.0.255 10.40.60.0 0.0.0.255
+ remark --- all other internal and private space denied, internet allowed ---
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.10.60.0 0.0.0.255 any
+ip access-list extended ACL-FIN-IN
+ remark --- control plane and infrastructure ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.40.0 0.0.0.255 10.10.40.0 0.0.0.255
+ remark --- return traffic for sessions opened from MGMT ---
+ permit tcp 10.10.40.0 0.0.0.255 10.10.10.0 0.0.0.255 established
+ permit icmp 10.10.40.0 0.0.0.255 10.10.10.0 0.0.0.255 echo-reply
+ remark --- full access to the server VLAN ---
+ permit ip 10.10.40.0 0.0.0.255 10.10.80.0 0.0.0.255
+ remark --- public website in the DMZ (internal DNS resolves www to 172.16.100.10) ---
+ permit tcp 10.10.40.0 0.0.0.255 host 172.16.100.10 eq www
+ permit tcp 10.10.40.0 0.0.0.255 host 172.16.100.10 eq 443
+ remark --- all other internal and private space denied, internet allowed ---
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.10.40.0 0.0.0.255 any
+ip access-list extended ACL-VOICE-IN
+ remark --- control plane and infrastructure ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.50.0 0.0.0.255 10.10.50.0 0.0.0.255
+ remark --- return traffic for sessions opened from MGMT ---
+ permit tcp 10.10.50.0 0.0.0.255 10.10.10.0 0.0.0.255 established
+ permit icmp 10.10.50.0 0.0.0.255 10.10.10.0 0.0.0.255 echo-reply
+ remark --- branch phones: SCCP to CME, RTP between phones ---
+ permit ip 10.10.50.0 0.0.0.255 10.20.50.0 0.0.0.255
+ permit ip 10.10.50.0 0.0.0.255 10.30.50.0 0.0.0.255
+ permit ip 10.10.50.0 0.0.0.255 10.40.50.0 0.0.0.255
+ remark --- CME router management: TACACS+, syslog, NTP, TFTP backups ---
+ permit tcp host 10.10.50.10 host 10.10.80.11 eq 49
+ permit udp host 10.10.50.10 host 10.10.80.12 eq 514
+ permit udp host 10.10.50.10 host 10.10.80.12 eq 123
+ permit udp host 10.10.50.10 host 10.10.80.12 eq tftp
+ remark --- no internet, no other internal access ---
+ deny ip any any
+ip access-list extended ACL-WIFI-GUEST-IN
+ remark --- control plane, DHCP, own gateway ---
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.70.0 0.0.0.255 10.10.70.0 0.0.0.255
+ remark --- internet only ---
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.10.70.0 0.0.0.255 any
+access-list 99 remark MGMT-SUBNET-ONLY
+access-list 99 permit 10.10.10.0 0.0.0.255
+!
+banner motd ^C
+Authorized access only. bosphorus-enterprise-net lab environment.
+All activity is logged.
+^C
+!
+tacacs-server host 10.10.80.11 key Lab-Tacacs-1
+!
+!
+snmp-server community BSP-RO-Lab RO
+!
+logging 10.10.80.12
+line con 0
+ logging synchronous
+ login authentication CONSOLE
+!
+line aux 0
+!
+line vty 0 4
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+line vty 5 15
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+!
+!
+!
+ntp authentication-key 1 md5 080D4D4C443711075F5A 7
+ntp authenticate
+ntp trusted-key 1
+ntp server 10.10.80.12 key 1
+!
+end
+
+
+

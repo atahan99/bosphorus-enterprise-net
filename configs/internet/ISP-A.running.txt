@@ -1,0 +1,114 @@
+Building configuration...
+
+Current configuration : 1455 bytes
+!
+version 12.2
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname ISP-A
+!
+!
+!
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+!
+!
+!
+!
+no ip cef
+no ipv6 cef
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+no ip domain-lookup
+!
+!
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ description TO-LON-EDGE-01-Gi0/0/0
+ ip address 198.51.100.1 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface FastEthernet1/0
+ description TO-IST-RTR-01-Gi0/0/0
+ ip address 198.51.100.9 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface Serial2/0
+ no ip address
+ clock rate 2000000
+ shutdown
+!
+interface Serial3/0
+ no ip address
+ clock rate 2000000
+ shutdown
+!
+interface FastEthernet4/0
+ description TO-ISP-B-Fa4/0
+ ip address 198.51.100.17 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface FastEthernet5/0
+ description TO-INET-CORE-Fa0/0
+ ip address 198.51.100.21 255.255.255.252
+ duplex auto
+ speed auto
+!
+router bgp 65001
+ bgp log-neighbor-changes
+ no synchronization
+ neighbor 198.51.100.2 remote-as 65100
+ neighbor 198.51.100.18 remote-as 65002
+ neighbor 198.51.100.22 remote-as 65000
+ network 0.0.0.0
+ network 198.51.100.0 mask 255.255.255.252
+ network 198.51.100.8 mask 255.255.255.252
+ network 198.51.100.16 mask 255.255.255.252
+ network 198.51.100.20 mask 255.255.255.252
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 Null0 
+!
+ip flow-export version 9
+!
+!
+!
+!
+!
+!
+!
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
+
+
+

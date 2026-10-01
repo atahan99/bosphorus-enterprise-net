@@ -4,7 +4,9 @@ A four-site enterprise network built and tested in **Cisco Packet Tracer 9.0.1**
 
 The scenario is fictional. Every design choice (which routing protocol runs where, how failover works, what each zone may reach) is justified in the docs and verified by a written test plan, including tests that deliberately break things.
 
-> **Status:** lab built (Phases 0–8) and tested (Phase 9: 16 pass, 5 pass with deviation, 4 not run; see [test-plan.md](docs/test-plan.md)); final documentation in progress. See [Build progress](#build-progress).
+> **Status:** built and tested. 26 tests: 16 pass, 5 pass with a documented deviation, 4 not run, 1 not possible in Packet Tracer ([results](#test-results)).
+
+![Logical topology](screenshots/phase9-topology-full.png)
 
 ---
 
@@ -54,11 +56,11 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | Routing | Inter-VLAN routing on L3 switch SVIs, OSPF multi-area with MD5 and summarisation, EIGRP, single-point redistribution, eBGP with longest-match inbound engineering (PT has no iBGP, prefix-lists or route-maps) |
 | Redundancy | HSRP at every site, redundant switch pairs at the branches, dual ISP failover with symmetric NAT, backup VPN tunnels for both GRE branches, dual Toronto circuits |
 | WAN / VPN | GRE over IPsec with OSPF, PPP with CHAP (an ASA branch was planned but PT's ASA can't complete IPsec with IOS, [ADR 0007](docs/adr/0007-chicago-router-not-asa.md)) |
-| Edge security | Stateful firewall (CBAC + ACLs; zone-based firewall replaced in Phase 6, see ADR 0015), PAT and static NAT, DMZ |
+| Edge security | Stateful firewall (CBAC + ACLs, [ADR 0015](docs/adr/0015-cbac-not-zbf.md)), PAT and static NAT, DMZ |
 | Internal security | Inter-VLAN ACL policy matrix, AAA (TACACS+ / RADIUS), SSH-only management, NTP, Syslog, SNMP |
 | Services | DHCP, DNS, HTTP, email, TFTP config backups |
-| Wireless | Every site: WLC-3504 with lightweight APs in London, autonomous APs at the branches; WPA2-Enterprise corporate SSID, isolated guest SSID |
-| Voice / QoS | CME IP telephony for all four sites, WAN QoS (subject to Phase 0 validation) |
+| Wireless | WLC-3504 with lightweight APs in London, autonomous APs at the branches; WPA2-Enterprise (RADIUS) corporate SSID in London, PSK guest SSID; branch guests isolated |
+| Voice / QoS | CME IP telephony for all four sites, MQC marking and queuing on every WAN edge |
 
 ## Repository map
 
@@ -69,15 +71,15 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | [`docs/cabling-plan.md`](docs/cabling-plan.md) | Device models, modules and port-to-port cabling |
 | [`docs/build-guide.md`](docs/build-guide.md) | Phase-by-phase build steps with verification commands |
 | [`docs/test-plan.md`](docs/test-plan.md) | 26 tests, including failure and attack scenarios, with results |
-| [`docs/adr/`](docs/adr/) | 14 architecture decision records |
+| [`docs/adr/`](docs/adr/) | 15 architecture decision records |
 | [`docs/pt-support-matrix.md`](docs/pt-support-matrix.md) | What Packet Tracer 9 does and doesn't support, verified hands-on |
 | [`docs/lab-credentials.md`](docs/lab-credentials.md) | Every lab secret in one place |
 | [`configs/`](configs/) | Every device's configuration, by site, sectioned by build phase |
 | [`configs/servers/`](configs/servers/) | Server, WLC, phone and endpoint settings (GUI-configured) |
 | [`diagrams/`](diagrams/) | Topology, Layer 2, routing, security-zone, VPN and wireless diagrams |
 | [`phase0/`](phase0/) | Feature-validation lab and procedure |
-| [`pkt/`](pkt/) | The Packet Tracer file |
-| [`screenshots/`](screenshots/) | Test evidence, named by test ID |
+| [`pkt/`](pkt/) | The Packet Tracer file, plus a checkpoint per build phase |
+| [`screenshots/`](screenshots/) | Build evidence by phase, test evidence by test ID |
 
 ## Build progress
 
@@ -95,6 +97,23 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | 9 | Testing | ✅ |
 | 10 | Documentation and blog | ⏳ |
 
+## Test results
+
+Full procedures, evidence and deviations are in [test-plan.md](docs/test-plan.md).
+
+| Result | Tests |
+|---|---|
+| ✅ Pass (16) | Core switch, EtherChannel, ISP-A, Istanbul tunnel, Chicago tunnel, branch switch and Toronto circuit failures; CHAP and OSPF authentication; SSH-only management with TACACS+ and local fallback; Wi-Fi credentials; voice calls to every site; NTP and syslog; unsolicited inbound traffic; DMZ isolation; BPDU guard; BGP advertisements |
+| ⚠️ Pass with deviation (5) | ACL policy matrix and guest isolation (London Wi-Fi clients share the management VLAN, a Packet Tracer WLC limitation); ISP-A and Istanbul tunnel failover (needed the fixes below); DAI (configured, not enforced by PT) |
+| Not run (4) | Port security, rogue DHCP, root guard, QoS under congestion: each already proven, or not modelled, in the Phase 0 validation |
+| n/a (1) | Loop guard: not available in Packet Tracer |
+
+What testing found and fixed:
+
+- **A black hole during ISP failover.** LON-CORE-01's backup default pointed at the WAN router instead of the other core, so half the London VLANs would have lost the internet with ISP-A down. The earlier test had used a VLAN on the other core.
+- **Wrong TACACS+ client addresses** for two branch switches: management logins from London were rejected.
+- **A stuck IPsec session** to the backup London edge after reopening the lab; and **DHCP snooping err-disabling desk ports** after a branch switch reboot. Both are Packet Tracer behaviours, recorded with their workarounds.
+
 ## Opening the lab
 
 - Built and tested in **Cisco Packet Tracer 9.0.1 (build 9.0.1.0858)**. Open it with this version or newer; Packet Tracer files are not backward-compatible.
@@ -102,15 +121,11 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 
 ## Optional: MCP-assisted building
 
-The lab can be built manually from the documentation; no automation is required. As an optional add-on, [MCP-Packet-Tracer by Mats2208](https://github.com/Mats2208/MCP-Packet-Tracer) can automate parts of device placement, cabling and configuration through Packet Tracer's script module.
-
-Install the third-party MCP server in an isolated Python virtual environment such as `.venv-packet-tracer-mcp/` so it can be removed without affecting the system Python installation. Follow the upstream setup instructions, start the `MCP-BUILDER` script module in Packet Tracer, and confirm that its bridge reports online before sending commands.
-
-The MCP device catalog and the Packet Tracer GUI can expose different interface names. Before building the real topology, run the throwaway device/module/link preflight in the [build guide](docs/build-guide.md#phase-2-place-and-cable) and record any accepted port mappings in the cabling plan. The written plans and device configurations remain the canonical reference if automation is unavailable.
+The lab can be built by hand from the docs. Parts of it were automated with [MCP-Packet-Tracer](https://github.com/Mats2208/MCP-Packet-Tracer) (Packet Tracer's script module driven by an AI agent); the build guide notes where the MCP's device catalog differs from the live port names.
 
 ## Packet Tracer limitations
 
-Packet Tracer implements a subset of IOS. Where a production network would use something PT lacks (VRRP, DMVPN/VTI, SNMPv3, CoPP, UDLD), the design uses the closest supported equivalent and the gap is recorded in [`docs/pt-support-matrix.md`](docs/pt-support-matrix.md). Convergence times measured in PT are not representative of real hardware.
+Packet Tracer implements a subset of IOS. Where a production network would use something PT lacks (VRRP, DMVPN/VTI, SNMPv3, CoPP, UDLD), the design uses the closest supported equivalent and the gap is recorded in [`docs/pt-support-matrix.md`](docs/pt-support-matrix.md). Convergence times measured in PT are not representative of real hardware, and PT 9.0.1 crashed several times on a lab this size (see the matrix).
 
 ---
 

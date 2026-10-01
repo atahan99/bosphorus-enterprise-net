@@ -144,13 +144,14 @@ flowchart LR
 flowchart LR
   subgraph LONW["London: central"]
     AP["LON-AP-01 to 04<br/>VLAN 10, DHCP option 43"] -- CAPWAP --> WLC["LON-WLC-01<br/>10.10.10.20"]
-    WLC -- "BSP-CORP to VLAN 60" --> CORP["Corp clients"]
-    WLC -- "BSP-GUEST to VLAN 70" --> GUEST["Guests, internet only"]
+    WLC -- "BSP-CORP (WPA2-Enterprise)" --> CORP["Corp clients"]
+    WLC -- "BSP-GUEST (PSK)" --> GUEST["Guests"]
   end
   subgraph BR["Each branch: local switching"]
-    BAP1["AP-01 on SW-01: BSP-CORP"] --> V60["VLAN 60"]
-    BAP2["AP-02 on SW-02: BSP-GUEST"] --> V70["VLAN 70, guest ACL"]
+    BAP1["AP-01 on SW-01: BSP-CORP, WPA2-PSK"] --> V60["VLAN 60"]
+    BAP2["AP-02 on SW-02: BSP-GUEST, WPA2-PSK"] --> V70["VLAN 70, guest ACL"]
   end
   WLC -- "RADIUS" --> AAA["LON-SRV-AAA-01"]
-  BAP1 -- "RADIUS over VPN / circuit" --> AAA
 ```
+
+As designed, London corporate and guest clients land in VLANs 60 and 70. As built they land in VLAN 10, because Packet Tracer treats the WLC uplink as an access port and can't carry its dynamic interfaces ([matrix B-53](../docs/pt-support-matrix.md)). Branch APs have no RADIUS option, so the branch corporate SSID uses a pre-shared key (B-14).

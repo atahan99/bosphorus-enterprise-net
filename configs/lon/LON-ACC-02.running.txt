@@ -1,0 +1,413 @@
+Building configuration...
+
+Current configuration : 10076 bytes
+!
+version 15.0
+service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname LON-ACC-02
+!
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+!
+!
+!
+aaa new-model
+!
+aaa authentication login CONSOLE local 
+aaa authentication login default group tacacs+ local 
+!
+!
+!
+!
+ip ssh version 2
+ip ssh time-out 60
+no ip domain-lookup
+ip domain-name corp.bosphorus.test
+!
+username netadmin secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
+!
+vtp domain BOSPHORUS
+vtp mode transparent
+!
+ip arp inspection vlan 20,50
+!
+ip dhcp snooping vlan 10,20,50
+no ip dhcp snooping information option
+ip dhcp snooping
+!
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+vlan 10
+ name MGMT
+!
+vlan 20
+ name ENG
+!
+vlan 50
+ name VOICE
+!
+vlan 998
+ name PARKING
+!
+vlan 999
+ name NATIVE-UNUSED
+!
+interface FastEthernet0/1
+ description DESK-ENG (LON-PC-ENG-03)
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0005.5E7A.C5DE
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/2
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/3
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/4
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/5
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/6
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/7
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/8
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/9
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/10
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/11
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/12
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/13
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/14
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/15
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/16
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/17
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/18
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/19
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/20
+ description DESK-ENG
+ switchport access vlan 20
+ switchport mode access
+ switchport nonegotiate
+ switchport voice vlan 50
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/21
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/22
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/23
+ description LON-AP-02
+ switchport access vlan 10
+ switchport mode access
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0002.17E6.AE01
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/24
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet0/1
+ description TO-LON-CORE-01-Gi1/0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,50,999
+ ip arp inspection trust
+ ip dhcp snooping trust
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet0/2
+ description TO-LON-CORE-02-Gi1/0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,50,999
+ ip arp inspection trust
+ ip dhcp snooping trust
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan10
+ description MGMT
+ ip address 10.10.10.12 255.255.255.0
+!
+ip default-gateway 10.10.10.1
+!
+banner motd ^C
+Authorized access only. bosphorus-enterprise-net lab environment.
+All activity is logged.
+^C
+logging 10.10.80.12
+tacacs-server host 10.10.80.11 key Lab-Tacacs-1
+!
+!
+snmp-server community BSP-RO-Lab RO
+!
+access-list 99 remark MGMT-SUBNET-ONLY
+access-list 99 permit 10.10.10.0 0.0.0.255
+line con 0
+ logging synchronous
+ login authentication CONSOLE
+!
+line vty 0 4
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+line vty 5 15
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+!
+!
+!
+ntp authenticate
+ntp trusted-key 1
+ntp server 10.10.80.12 key 1
+!
+end
+
+
+

@@ -302,7 +302,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 ## T14: Voice calls
 
-**Procedure:** `show ephone registered` on LON-VOICE-01 to see which number each phone got. Call London → London (e.g. LON-PH-01 → LON-PH-02), then London → Istanbul, London → Chicago and London → Toronto. During the Toronto call, `show policy-map interface Serial0/1/0` on LON-WAN-01. Behaviour under congestion is tested separately in T26.
+**Procedure:** `show ephone` on LON-VOICE-01 to see which number each phone got (`show ephone registered` prints nothing in PT). Call London → London (e.g. LON-PH-01 → LON-PH-02), then London → Istanbul, London → Chicago and London → Toronto. During the Toronto call, `show policy-map interface Serial0/1/0` on LON-WAN-01. Behaviour under congestion is tested separately in T26.
 
 **Expected:** every call rings and connects; EF (voice) class counters increase on the Toronto circuit during that call.
 
@@ -452,7 +452,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Purpose:** show that `PM-WAN-OUT` protects voice when a WAN link is actually full, not just that the class counters move. Packet Tracer's queuing model is approximate, so treat the result as a demonstration of the policy's behaviour, not a measurement of latency or jitter.
 
-**Prerequisites:** P0-17a/b passed (MQC marking and queuing accepted on the ISR2911 and ISR4331). If QoS was moved to `configs/_design-only/`, mark this test ❌ with that reason.
+**Prerequisites:** P0-17a/b passed (MQC marking and queuing accepted on the ISR2911 and ISR4331).
 
 **Procedure:**
 

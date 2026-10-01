@@ -1,0 +1,109 @@
+Building configuration...
+
+Current configuration : 1175 bytes
+!
+version 12.2
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname INET-CORE
+!
+!
+!
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+!
+!
+!
+!
+no ip cef
+no ipv6 cef
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+no ip domain-lookup
+!
+!
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ description TO-ISP-A-Fa5/0
+ ip address 198.51.100.22 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface FastEthernet1/0
+ description TO-ISP-B-Fa5/0
+ ip address 198.51.100.26 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface Serial2/0
+ no ip address
+ clock rate 2000000
+ shutdown
+!
+interface Serial3/0
+ no ip address
+ clock rate 2000000
+ shutdown
+!
+interface FastEthernet4/0
+ description TO-INET-SW-Fa0/1
+ ip address 192.0.2.1 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface FastEthernet5/0
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+router bgp 65000
+ bgp router-id 192.0.2.1
+ bgp log-neighbor-changes
+ no synchronization
+ neighbor 198.51.100.21 remote-as 65001
+ neighbor 198.51.100.25 remote-as 65002
+ network 192.0.2.0
+!
+ip classless
+!
+ip flow-export version 9
+!
+!
+!
+!
+!
+!
+!
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
+
+
+

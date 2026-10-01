@@ -1,0 +1,241 @@
+Building configuration...
+
+Current configuration : 5416 bytes
+!
+version 15.1
+service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname TOR-RTR-01
+!
+login block-for 120 attempts 3 within 60
+!
+!
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+!
+!
+!
+aaa new-model
+!
+aaa authentication login CONSOLE local 
+aaa authentication ppp default local 
+aaa authentication login default group tacacs+ local 
+!
+!
+!
+!
+!
+!
+!
+no ip cef
+no ipv6 cef
+!
+!
+!
+username LON-WAN-01 password 7 080D4D4C443A0D1602465D
+username netadmin privilege 15 secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
+!
+!
+license udi pid CISCO2911/K9 sn FTX1524ZG4U-
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+ip ssh time-out 60
+no ip domain-lookup
+ip domain-name corp.bosphorus.test
+!
+!
+spanning-tree mode pvst
+!
+class-map match-any CM-MARK-VOICE
+ match access-group name ACL-QOS-VOICE
+class-map match-any CM-MARK-SIGNALING
+ match access-group name ACL-QOS-SIGNALING
+class-map match-any CM-MARK-CRITICAL
+ match access-group name ACL-QOS-CRITICAL
+class-map match-any CM-MARK-SCAVENGER
+ match access-group name ACL-QOS-SCAVENGER
+class-map match-any CM-VOICE
+ match ip dscp ef
+class-map match-any CM-SIGNALING
+ match ip dscp cs3
+class-map match-any CM-CRITICAL
+ match ip dscp af31
+class-map match-any CM-SCAVENGER
+ match ip dscp cs1
+!
+policy-map PM-MARK-IN
+ class CM-MARK-VOICE
+  set ip dscp ef
+ class CM-MARK-SIGNALING
+  set ip dscp cs3
+ class CM-MARK-CRITICAL
+  set ip dscp af31
+ class CM-MARK-SCAVENGER
+  set ip dscp cs1
+!
+policy-map PM-WAN-OUT
+ class CM-VOICE
+  priority percent 10
+ class CM-SIGNALING
+  bandwidth percent 5
+ class CM-CRITICAL
+  bandwidth percent 20
+ class CM-SCAVENGER
+  bandwidth percent 1
+ class class-default
+  fair-queue
+!
+!
+!
+!
+key chain KC-EIGRP
+ key 1
+  key-string 080D4D4C443C0C10001B4155
+!
+interface Loopback0
+ ip address 10.255.255.21 255.255.255.255
+!
+interface GigabitEthernet0/0
+ description TO-TOR-SW-01-Gi1/0/22
+ ip address 10.40.0.1 255.255.255.252
+ ip authentication mode eigrp 100 md5
+ ip authentication key-chain eigrp 100 KC-EIGRP
+ service-policy input PM-MARK-IN
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/1
+ description TO-TOR-SW-02-Gi1/0/22
+ ip address 10.40.0.5 255.255.255.252
+ ip authentication mode eigrp 100 md5
+ ip authentication key-chain eigrp 100 KC-EIGRP
+ service-policy input PM-MARK-IN
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/2
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface Serial0/0/0
+ description TO-LON-WAN-01-Se0/1/0
+ bandwidth 2000
+ ip address 10.255.2.2 255.255.255.252
+ ip authentication mode eigrp 100 md5
+ ip authentication key-chain eigrp 100 KC-EIGRP
+ encapsulation ppp
+ ppp authentication chap
+ ip summary-address eigrp 100 10.40.0.0 255.255.0.0 5
+ service-policy output PM-WAN-OUT
+!
+interface Serial0/0/1
+ description TO-LON-WAN-01-Se0/1/1
+ bandwidth 2000
+ ip address 10.255.2.6 255.255.255.252
+ ip authentication mode eigrp 100 md5
+ ip authentication key-chain eigrp 100 KC-EIGRP
+ encapsulation ppp
+ ppp authentication chap
+ ip summary-address eigrp 100 10.40.0.0 255.255.0.0 5
+ service-policy output PM-WAN-OUT
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router eigrp 100
+ eigrp router-id 10.255.255.21
+ passive-interface Loopback0
+ network 10.255.2.0 0.0.0.7
+ network 10.40.0.0 0.0.0.7
+ network 10.255.255.21 0.0.0.0
+!
+ip classless
+!
+ip flow-export version 9
+!
+!
+ip access-list extended sl_def_acl
+ deny tcp any any eq telnet
+ deny tcp any any eq www
+ deny tcp any any eq 22
+ permit tcp any any eq 22
+access-list 99 remark MGMT-SUBNET-ONLY
+access-list 99 permit 10.10.10.0 0.0.0.255
+ip access-list extended ACL-QOS-VOICE
+ remark RTP from phones at every site
+ permit udp 10.10.50.0 0.0.0.255 any range 16384 32767
+ permit udp 10.20.50.0 0.0.0.255 any range 16384 32767
+ permit udp 10.30.50.0 0.0.0.255 any range 16384 32767
+ permit udp 10.40.50.0 0.0.0.255 any range 16384 32767
+ip access-list extended ACL-QOS-SIGNALING
+ remark SCCP between branch phones and CME
+ permit tcp 10.20.50.0 0.0.0.255 host 10.10.50.10 eq 2000
+ permit tcp host 10.10.50.10 eq 2000 10.20.50.0 0.0.0.255
+ permit tcp 10.30.50.0 0.0.0.255 host 10.10.50.10 eq 2000
+ permit tcp host 10.10.50.10 eq 2000 10.30.50.0 0.0.0.255
+ permit tcp 10.40.50.0 0.0.0.255 host 10.10.50.10 eq 2000
+ permit tcp host 10.10.50.10 eq 2000 10.40.50.0 0.0.0.255
+ip access-list extended ACL-QOS-CRITICAL
+ remark Branch users <-> London servers
+ permit ip 10.20.0.0 0.0.255.255 10.10.80.0 0.0.0.255
+ permit ip 10.10.80.0 0.0.0.255 10.20.0.0 0.0.255.255
+ permit ip 10.40.0.0 0.0.255.255 10.10.80.0 0.0.0.255
+ permit ip 10.10.80.0 0.0.0.255 10.40.0.0 0.0.255.255
+ permit ip 10.30.0.0 0.0.255.255 10.10.80.0 0.0.0.255
+ permit ip 10.10.80.0 0.0.0.255 10.30.0.0 0.0.255.255
+ip access-list extended ACL-QOS-SCAVENGER
+ remark Guest Wi-Fi at every site
+ permit ip 10.10.70.0 0.0.0.255 any
+ permit ip 10.20.70.0 0.0.0.255 any
+ permit ip 10.30.70.0 0.0.0.255 any
+ permit ip 10.40.70.0 0.0.0.255 any
+!
+banner motd ^C
+Authorized access only. bosphorus-enterprise-net lab environment.
+All activity is logged.
+^C
+!
+tacacs-server host 10.10.80.11 key Lab-Tacacs-1
+!
+!
+snmp-server community BSP-RO-Lab RO
+!
+logging 10.10.80.12
+line con 0
+ logging synchronous
+ login authentication CONSOLE
+!
+line aux 0
+!
+line vty 0 4
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+!
+!
+ntp authentication-key 1 md5 080D4D4C443711075F5A 7
+ntp authenticate
+ntp trusted-key 1
+ntp server 10.10.80.12 key 1
+!
+end
+
+
+

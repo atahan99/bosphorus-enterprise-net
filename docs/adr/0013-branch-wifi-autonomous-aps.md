@@ -8,7 +8,7 @@ Every site needs corporate and guest Wi-Fi. London has a wireless controller (WL
 
 ## Decision
 
-Each branch gets **autonomous APs (AccessPoint-PT)**, one per SSID and one on each of the two site switches, that bridge `BSP-CORP` into the site's VLAN 60 and `BSP-GUEST` into VLAN 70. Traffic is switched locally; the branch's own gateway enforces guest isolation, and corporate clients authenticate against the RADIUS server in London.
+Each branch gets **autonomous APs (AccessPoint-PT)**, one per SSID and one on each of the two site switches, that bridge `BSP-CORP` into the site's VLAN 60 and `BSP-GUEST` into VLAN 70. Traffic is switched locally; the branch's own gateway enforces guest isolation, and corporate clients join with a pre-shared key (see Consequences).
 
 ## Alternatives considered
 
@@ -18,8 +18,8 @@ Each branch gets **autonomous APs (AccessPoint-PT)**, one per SSID and one on ea
 
 ## Consequences
 
-- Branch Wi-Fi works during a WAN outage (new corporate clients can't authenticate until RADIUS is reachable again; guests are unaffected).
+- Branch Wi-Fi works during a WAN outage.
 - APs are managed one by one. Production would use FlexConnect or cloud-managed APs.
 - AccessPoint-PT carries one SSID each, so losing a branch switch loses one of the two SSIDs. Production would use dual-SSID APs, one per switch, so either switch failure leaves both SSIDs up.
 - The two APs per branch and the switch-port limit of ten learned wireless MACs are sufficient for the representative lab clients, not the full headcount. A production RF survey would determine the AP count and client limits.
-- If Packet Tracer's AccessPoint-PT can't do WPA2-Enterprise, the corporate SSID uses WPA2-PSK at the branches and the gap is recorded in the support matrix.
+- AccessPoint-PT has no RADIUS option, so the branch corporate SSID uses WPA2-PSK (`Lab-Corp-Wifi-1`), recorded as B-14 in the support matrix. In production these would be WPA2-Enterprise APs managed centrally.

@@ -2,31 +2,7 @@
 
 Everything needed for Phase 2: which device to drag in, which modules to add, and exactly which port connects to which. Addresses are in [addressing-plan.md](addressing-plan.md); sizing is explained in [design-plan.md §4](design-plan.md#4-sizing).
 
-Port names below are what Packet Tracer 9 shows for these models. The MCP catalog can expose different names for some models. Run the build guide's throwaway MCP preflight first; if a name differs, keep the physical position and record the accepted MCP-to-GUI mapping here before building the production file.
-
-### MCP preflight results (2026-09-29)
-
-Every model was placed in a throwaway file and read back live. Use the live names below; the MCP's static catalog is wrong for the 3650, the ASA and Router-PT.
-
-| Model | Live port names | Catalog said |
-|---|---|---|
-| 3650-24PS | `GigabitEthernet1/0/1`–`1/0/24`, `GigabitEthernet1/1/1`–`1/1/4` | `FastEthernet0/x`, `GigabitEthernet0/1–2` |
-| ASA 5506-X | `GigabitEthernet1/1`–`1/8`, `Management1/1` | `GigabitEthernet1/0`–`1/7` (no longer used: CHI-FW-01 was replaced in Phase 6) |
-| Router-PT | `FastEthernet0/0`, `1/0`, `4/0`, `5/0`, `Serial2/0`, `3/0` | `FastEthernet0/0`, `0/1` |
-| IP Phone 7960 | `Switch` (to the access switch), `PC` (to the desk PC) | `Port 0`, `PC Port` |
-| 3702i (LAP) | `GigabitEthernet0` | same |
-| WLC-3504 | `GigabitEthernet1`–`5` | `GigabitEthernet1`–`4` |
-
-| Module | Device | MCP slot | Result |
-|---|---|---|---|
-| NIM-2T | ISR4331 | `0/1` | `Serial0/1/0`–`0/1/1` |
-| HWIC-2T | ISR2911 | `0/0` | `Serial0/0/0`–`0/0/1` |
-| AC-POWER-SUPPLY | 3650-24PS | `2/4` | installed |
-| IP_PHONE_POWER_ADAPTER | 7960 | `0/0` | installed |
-| ACCESS_POINT_POWER_ADAPTER | 3702i | `1` | installed |
-| Linksys-WPC300N | Laptop-PT | `0` | remove the wired NIC in slot `0` first (`removeModule("0")`), then add with module type `"9"`; the laptop then shows `Wireless0` |
-
-With the MCP's `addLink`, the **first** device of a serial link becomes the DCE end (`show controllers` → `DCE V.35, clock rate 2000000`), so LON-WAN-01 is always listed first.
+Port names below are what Packet Tracer 9 shows for these models.
 
 ## 1. Devices and modules
 
@@ -200,3 +176,26 @@ Suggested placement so screenshots read left to right:
 - [x] Hostnames set on all devices (the ISP routers, INET-SW and the WLC get theirs with their Phase 5 / Phase 8 config).
 - [ ] Every infrastructure interface has a description in the form `TO-<peer>-<peer-port>`: routers done in Phase 2; the switch uplinks get theirs from the Phase 3, 4 and 6 sections.
 - [x] `show cdp neighbors` on each router and switch matches this file (30 of 30 live infrastructure links; the 8 ISP links are checked in Phase 5).
+
+## Appendix: port names for MCP automation (checked 2026-09-29)
+
+Every model was placed in a throwaway file and read back live. Use the live names below; the MCP's static catalog is wrong for the 3650 and Router-PT.
+
+| Model | Live port names | Catalog said |
+|---|---|---|
+| 3650-24PS | `GigabitEthernet1/0/1`–`1/0/24`, `GigabitEthernet1/1/1`–`1/1/4` | `FastEthernet0/x`, `GigabitEthernet0/1–2` |
+| Router-PT | `FastEthernet0/0`, `1/0`, `4/0`, `5/0`, `Serial2/0`, `3/0` | `FastEthernet0/0`, `0/1` |
+| IP Phone 7960 | `Switch` (to the access switch), `PC` (to the desk PC) | `Port 0`, `PC Port` |
+| 3702i (LAP) | `GigabitEthernet0` | same |
+| WLC-3504 | `GigabitEthernet1`–`5` | `GigabitEthernet1`–`4` |
+
+| Module | Device | MCP slot | Result |
+|---|---|---|---|
+| NIM-2T | ISR4331 | `0/1` | `Serial0/1/0`–`0/1/1` |
+| HWIC-2T | ISR2911 | `0/0` | `Serial0/0/0`–`0/0/1` |
+| AC-POWER-SUPPLY | 3650-24PS | `2/4` | installed |
+| IP_PHONE_POWER_ADAPTER | 7960 | `0/0` | installed |
+| ACCESS_POINT_POWER_ADAPTER | 3702i | `1` | installed |
+| Linksys-WPC300N | Laptop-PT | `0` | remove the wired NIC in slot `0` first (`removeModule("0")`), then add with module type `"9"`; the laptop then shows `Wireless0` |
+
+With the MCP's `addLink`, the **first** device of a serial link becomes the DCE end (`show controllers` → `DCE V.35, clock rate 2000000`), so LON-WAN-01 is always listed first.
