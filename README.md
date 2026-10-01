@@ -76,7 +76,7 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | [`docs/lab-credentials.md`](docs/lab-credentials.md) | Every lab secret in one place |
 | [`configs/`](configs/) | Every device's configuration, by site, sectioned by build phase |
 | [`configs/servers/`](configs/servers/) | Server, WLC, phone and endpoint settings (GUI-configured) |
-| [`diagrams/`](diagrams/) | Topology, Layer 2, routing, security-zone, VPN and wireless diagrams |
+| [`diagrams/`](diagrams/) | Mermaid diagrams: sites, Layer 2, branch layout, routing, firewall, VPN, wireless, physical view, shared services |
 | [`phase0/`](phase0/) | Feature-validation lab and procedure |
 | [`pkt/`](pkt/) | The Packet Tracer file, plus a checkpoint per build phase |
 | [`screenshots/`](screenshots/) | Build evidence by phase, test evidence by test ID |

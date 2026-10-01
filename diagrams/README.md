@@ -33,7 +33,7 @@ flowchart TB
   WAN -. "two private circuits (serial, PPP/CHAP)" .- TOR["Toronto: 36 staff, 10.40.0.0/16<br/>TOR-RTR-01, TOR-SW-01/02 pair, 2 APs"]
 ```
 
-Port-level cabling is in [cabling-plan.md](../docs/cabling-plan.md); the Packet Tracer workspace screenshot (`screenshots/phase2-topology-full.png`) is the physical view.
+Port-level cabling is in [cabling-plan.md](../docs/cabling-plan.md). The full Packet Tracer canvas is in [`screenshots/phase9-topology-full.png`](../screenshots/phase9-topology-full.png); the physical layout is in section 7.
 
 ## 2. Layer 2 in London: VLANs, STP roots, HSRP
 
@@ -51,7 +51,7 @@ flowchart TB
   C1 -- "trunk 10, 60, 70" --- WLC["LON-WLC-01"]
 ```
 
-Every downlink is dual-homed: root guard on the core side, loop guard on the access side. Per VLAN, each access switch forwards on the uplink to that VLAN's root and blocks the other (on LON-ACC-01, VLAN 10 forwards on Gi0/1 and blocks Gi0/2; VLAN 20 the reverse). All trunks: native VLAN 999, DTP off, explicit allowed lists.
+Every downlink is dual-homed, with root guard on the core side (Packet Tracer has no loop guard, matrix P0-02b). Per VLAN, each access switch forwards on the uplink to that VLAN's root and blocks the other (on LON-ACC-01, VLAN 10 forwards on Gi0/1 and blocks Gi0/2; VLAN 20 the reverse). All trunks: native VLAN 999, DTP off, explicit allowed lists.
 
 ## 2b. Branch layout (every branch)
 
@@ -155,3 +155,53 @@ flowchart LR
 ```
 
 As designed, London corporate and guest clients land in VLANs 60 and 70. As built they land in VLAN 10, because Packet Tracer treats the WLC uplink as an access port and can't carry its dynamic interfaces ([matrix B-53](../docs/pt-support-matrix.md)). Branch APs have no RADIUS option, so the branch corporate SSID uses a pre-shared key (B-14).
+
+## 7. Physical view (Packet Tracer)
+
+Packet Tracer computes Wi-Fi range from the Physical view, so each site has its own city, office building and wiring closet. Before this, every device sat in one office and branch clients joined other sites' access points.
+
+```mermaid
+flowchart TB
+  subgraph IC["Intercity map"]
+    subgraph LONP["London"]
+      LHQ["London HQ<br/>wiring closet: all LON network gear<br/>office: desks, phones, printers, WLC APs, Wi-Fi clients"]
+    end
+    subgraph ISTP["Istanbul"]
+      IOF["Istanbul Office<br/>closet: IST-RTR-01, IST-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet"]
+    end
+    subgraph CHIP["Chicago"]
+      COF["Chicago Office<br/>closet: CHI-RTR-01, CHI-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet"]
+    end
+    subgraph TORP["Toronto"]
+      TOF["Toronto Office<br/>closet: TOR-RTR-01, TOR-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet"]
+    end
+    subgraph NETP["Internet"]
+      DC["ISP Datacenter<br/>closet: ISP-A, ISP-B, INET-CORE, INET-SW, web and DNS servers<br/>floor: INET-HOST-01"]
+    end
+  end
+```
+
+## 8. Management and shared services
+
+Every site depends on the London server VLAN (10.10.80.0/24) for these. Device-to-server traffic leaves from the interface facing the server, so branch devices appear at the servers with their router-link addresses (see [servers.md](../configs/servers/servers.md)).
+
+```mermaid
+flowchart LR
+  MGMT["LON-MGMT-PC-01<br/>10.10.10.50"]
+  DEV["Routers and switches<br/>(all four sites)"]
+  WLC["LON-WLC-01"]
+  PH["IP phones (all sites)"]
+  CLI["PCs and Wi-Fi clients"]
+  AAA["LON-SRV-AAA-01 10.10.80.11<br/>TACACS+, RADIUS"]
+  OPS["LON-SRV-OPS-01 10.10.80.12<br/>syslog, NTP, TFTP"]
+  CORE["LON-SRV-CORE-01 10.10.80.10<br/>DHCP (London), DNS"]
+  CME["LON-VOICE-01 10.10.50.10<br/>CME call control"]
+  MGMT -- "SSH (VTY ACL: MGMT only)" --> DEV
+  DEV -- "TACACS+ logins" --> AAA
+  WLC -- "RADIUS 1812 (BSP-CORP)" --> AAA
+  DEV -- "syslog, NTP, TFTP backups" --> OPS
+  CLI -- "DHCP relay, DNS" --> CORE
+  PH -- "SCCP registration" --> CME
+```
+
+Branch DHCP is local, served by each branch switch pair ([ADR 0009](../docs/adr/0009-local-dhcp-istanbul.md)).

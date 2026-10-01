@@ -1,8 +1,19 @@
+# OS and editor files
 .DS_Store
 Thumbs.db
 *.bak
 *~
-.venv-packet-tracer-mcp/
+
+# Local tooling: Claude Code settings, Python virtual environments, MCP config
+.claude/
+.venv*/
+venv/
+__pycache__/
+.mcp.json
+
+# Packet Tracer working saves (only phase-N.pkt and the canonical file are kept)
+pkt/*-wip*.pkt
+pkt/*-start.pkt
 
 # Blog drafts stay local
 blog/

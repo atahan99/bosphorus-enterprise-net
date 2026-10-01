@@ -1,6 +1,6 @@
 # Test plan
 
-Every test has a purpose, a procedure, the expected result and a place to record what actually happened. Evidence goes in `screenshots/` named by test ID (`T04-before-bgp.png`, `T04-after-bgp.png`, ...).
+Every test has a purpose, a procedure, the expected result and a place to record what actually happened. Evidence goes in `screenshots/` named by test ID (`T04-before-edge01.png`, `T04-after-routing.png`, ...).
 
 Run the tests after Phase 8, in order. Each test ends by restoring the lab to its normal state.
 
@@ -110,7 +110,7 @@ Rows 26–28 check that branch users and phones can't reach their own site's man
 
 Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same deny entries must now count on IST-SW-02, proving the policy survives a gateway failover.
 
-**Evidence:** `T01-matrix-*.png` for a few representative rows; `T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png` showing the counters above; `T01-acl-failover.png` for the repeat on IST-SW-02.
+**Evidence:** `T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png`.
 
 **Actual:** ⚠️ Every ✘ row was blocked and every ✔ row passed, with the ACL counters rising on the expected entries (`T01-acl-*.png`); browse rows checked by hand. Deviation: row 15 is reachable because London Wi-Fi clients are in VLAN 10 (matrix B-53). Row 13 first failed because LON-SRV-AAA-01 had IST-SW-01 and CHI-SW-01 registered with the wrong source addresses (10.x.0.2 instead of 10.x.0.14); after the correction, SSH reached `IST-SW-01>`. The 'connection refused' seen in between was `login block-for` quiet mode after the failed logins. First pings of a run can be lost to ARP; 4-packet runs were used. Row 28 and the failover repeat were not run.
 
@@ -245,7 +245,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Restore:** reconnect LON-PC-SALES-01, delete TEST-PC, `switchport port-security maximum 3`.
 
-**Evidence:** `T09-port-security.png`, `T09-syslog.png`. **Actual:** Not run: Packet Tracer enforces port security (sticky MACs are learned on every access port in this lab); the swap test was judged low value against the setup cost.
+**Evidence:** none (not run). **Actual:** Not run: Packet Tracer enforces port security (sticky MACs are learned on every access port in this lab); the swap test was judged low value against the setup cost.
 
 ---
 
@@ -257,7 +257,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Restore:** delete ROGUE-DHCP.
 
-**Evidence:** `T10-pc-lease.png`, `T10-snooping.png`. **Actual:** Not run: DHCP snooping was already validated in Phase 0 (matrix P0-04: the client got its lease, untrusted ports filtered). Building a full rogue DHCP server adds no new evidence.
+**Evidence:** none (not run). **Actual:** Not run: DHCP snooping was already validated in Phase 0 (matrix P0-04: the client got its lease, untrusted ports filtered). Building a full rogue DHCP server adds no new evidence.
 
 ---
 
@@ -270,7 +270,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** browsing works at both sites; every ping to an internal address fails.
 
-**Evidence:** `T11-guest-london.png`, `T11-guest-toronto.png`. **Actual:** ⚠️ Toronto: TOR-TABLET-01 → 10.40.20.1 and 10.10.80.10 both 0/4 (blocked). London: LON-TABLET-01 reaches 10.10.80.10 and 172.16.100.10, because PT puts every London Wi-Fi client in VLAN 10 (matrix B-53). LON-TABLET-01 and IST-TABLET-01 browse www.example.test (T01 rows 14 and 20).
+**Evidence:** none captured; the pings were run from the device command prompts (results in Actual and in T01). **Actual:** ⚠️ Toronto: TOR-TABLET-01 → 10.40.20.1 and 10.10.80.10 both 0/4 (blocked). London: LON-TABLET-01 reaches 10.10.80.10 and 172.16.100.10, because PT puts every London Wi-Fi client in VLAN 10 (matrix B-53). LON-TABLET-01 and IST-TABLET-01 browse www.example.test (T01 rows 14 and 20).
 
 ---
 
@@ -286,7 +286,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Restore:** turn the AAA service back on.
 
-**Evidence:** `T12-telnet-refused.png`, `T12-ssh-tacacs.png`, `T12-ssh-local-fallback.png`. **Actual:** ✅ By hand from LON-MGMT-PC-01: telnet refused; with TACACS+ up, the TACACS+ password is accepted and the local one rejected; with the AAA service off, the local password works (fallback); SSH from LON-PC-ENG-01 fails.
+**Evidence:** none captured; checked by hand. **Actual:** ✅ By hand from LON-MGMT-PC-01: telnet refused; with TACACS+ up, the TACACS+ password is accepted and the local one rejected; with the AAA service off, the local password works (fallback); SSH from LON-PC-ENG-01 fails.
 
 ---
 
@@ -296,7 +296,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** the laptop doesn't associate and gets no address. Restore `Lab-Wifi-1`.
 
-**Evidence:** `T13-wifi-rejected.png`. **Actual:** ✅ By hand: with `Wrong-Wifi-1` LON-LAPTOP-01 got no address; with `Lab-Wifi-1` restored it got 10.10.10.109 (VLAN 10, B-53).
+**Evidence:** none captured; checked by hand. **Actual:** ✅ By hand: with `Wrong-Wifi-1` LON-LAPTOP-01 got no address; with `Lab-Wifi-1` restored it got 10.10.10.109 (VLAN 10, B-53).
 
 ---
 
@@ -306,7 +306,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** every call rings and connects; EF (voice) class counters increase on the Toronto circuit during that call.
 
-**Evidence:** `T14-call-local.png`, `T14-call-branches.png`, `T14-qos-serial.png`. **Actual:** ✅ By hand: LON-PH-01 called 1003 (LON-PH-02), 1005 (IST), 1002 (CHI) and 1001 (TOR); every call rang and connected (`phase8-call-lon-ist.png`). The EF counter check during the Toronto call is covered by T26.
+**Evidence:** `phase8-call-lon-ist.png`, `phase8-ephones.png`, `phase8-qos-serial.png`. **Actual:** ✅ By hand: LON-PH-01 called 1003 (LON-PH-02), 1005 (IST), 1002 (CHI) and 1001 (TOR); every call rang and connected (`phase8-call-lon-ist.png`). The EF counter check during the Toronto call is covered by T26.
 
 ---
 
@@ -331,7 +331,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the final `deny ip any any`.
 
-**Evidence:** `T16-internet-host.png`, `T16-acl-drops.png`. **Actual:** ✅ From INET-HOST-01: ping 203.0.113.53 and 203.0.113.1 0/4, `telnet 203.0.113.10` timed out; ACL-OUTSIDE-IN final `deny ip any any` 22 hits. Browsing http://203.0.113.10 from INET-HOST-01 loads the published site (checked by hand).
+**Evidence:** `T16-acl-drops.png`. **Actual:** ✅ From INET-HOST-01: ping 203.0.113.53 and 203.0.113.1 0/4, `telnet 203.0.113.10` timed out; ACL-OUTSIDE-IN final `deny ip any any` 22 hits. Browsing http://203.0.113.10 from INET-HOST-01 loads the published site (checked by hand).
 
 ---
 
@@ -372,7 +372,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** remove the cable, re-enable `spanning-tree portfast` and `spanning-tree bpduguard enable` on Fa0/24. Then `shutdown` / `no shutdown` Gi1/0/1 on both cores: PT's root-guard block does not clear by itself.
 
-**Evidence:** `T19-root-inconsistent-core01.png`. **Actual:** Not run: Phase 0 (matrix P0-02a) already showed that PT enforces root guard in the STP state only, not on the data plane, and that the block has to be cleared by bouncing the core ports.
+**Evidence:** none (not run). **Actual:** Not run: Phase 0 (matrix P0-02a) already showed that PT enforces root guard in the STP state only, not on the data plane, and that the block has to be cleared by bouncing the core ports.
 
 ---
 
@@ -428,7 +428,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** disconnect TEST-PC and return the port to its documented test/spare state.
 
-**Evidence:** `T24-dai-active.png`, `T24-dhcp-client-works.png`. **Actual:** ⚠️ LON-ACC-01 VLAN 20 DAI `Enabled / Active`, counters 0 (`T24-dai-active.png`). The TEST-PC spoofing step was not run: Phase 0 (matrix P0-05a) already showed PT forwards ARP from unbound hosts.
+**Evidence:** `T24-dai-active.png`. **Actual:** ⚠️ LON-ACC-01 VLAN 20 DAI `Enabled / Active`, counters 0 (`T24-dai-active.png`). The TEST-PC spoofing step was not run: Phase 0 (matrix P0-05a) already showed PT forwards ARP from unbound hosts.
 
 ---
 
@@ -470,4 +470,4 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** stop the traffic generators or delete the Complex PDUs; reapply `service-policy output PM-WAN-OUT` if removed; `interface Serial0/1/1` → `no shutdown` and confirm EIGRP load-shares across both circuits again.
 
-**Evidence:** `T26-congested-interface.png`, `T26-policy-map-drops.png`, `T26-call-during-congestion.png`, and `T26-no-policy-contrast.png` if step 7 was run. **Actual:** Not run: PT's queuing model is approximate and congestion tests were the highest crash risk in this lab (matrix B-49). Classification and queuing are shown by the class counters instead (`phase8-qos-serial.png`: CS3 and AF31 matches on the Toronto circuit).
+**Evidence:** none (not run). **Actual:** Not run: PT's queuing model is approximate and congestion tests were the highest crash risk in this lab (matrix B-49). Classification and queuing are shown by the class counters instead (`phase8-qos-serial.png`: CS3 and AF31 matches on the Toronto circuit).
