@@ -123,6 +123,8 @@ What testing found and fixed:
 
 The lab can be built by hand from the docs. Parts of it were automated with [MCP-Packet-Tracer](https://github.com/Mats2208/MCP-Packet-Tracer) (Packet Tracer's script module driven by an AI agent); the build guide notes where the MCP's device catalog differs from the live port names.
 
+> **Note:** the MCP server ran from a Python virtual environment in the project folder (`.venv-packet-tracer-mcp/`, git-ignored), so nothing was installed into the system Python. To recreate it: `python3 -m venv .venv-packet-tracer-mcp`, then `.venv-packet-tracer-mcp/bin/pip install packet-tracer-mcp`, and point your MCP client at `.venv-packet-tracer-mcp/bin/pt-mcp --stdio`.
+
 ## Packet Tracer limitations
 
 Packet Tracer implements a subset of IOS. Where a production network would use something PT lacks (VRRP, DMVPN/VTI, SNMPv3, CoPP, UDLD), the design uses the closest supported equivalent and the gap is recorded in [`docs/pt-support-matrix.md`](docs/pt-support-matrix.md). Convergence times measured in PT are not representative of real hardware, and PT 9.0.1 crashed several times on a lab this size (see the matrix).
