@@ -68,7 +68,9 @@ If a login shows `% Login invalid` although the password is right, the server an
 
 LON-DMZ-SW01 uses local accounts only (see its config).
 
-**Branch APs (RADIUS):** AccessPoint-PT has no management IP, so there's no fixed client address to register. Add one Radius client per branch using the AP's **gateway-side** subnet guess first (e.g. `IST-AP-01` → 10.20.60.2, `CHI-AP-01` → 10.30.60.2, `TOR-AP-01` → 10.40.60.2, the SW-01 address in VLAN 60, secret `Lab-Radius-1`). If branch WPA2-Enterprise still fails, switch the branch corporate SSID to WPA2-PSK (`Lab-Corp-Wifi-1`) and record it as B-14 in the support matrix.
+**RADIUS port.** Server-PT's AAA service listens for RADIUS on **1645** by default; the WLC sends to **1812**. Set Services → AAA → Radius Port to `1812`, or WPA2-Enterprise clients associate and then time out (found in Phase 8).
+
+**Branch APs:** AccessPoint-PT has no RADIUS option at all (Disabled / WEP / WPA-PSK / WPA2-PSK only), so the branch corporate SSID uses WPA2-PSK `Lab-Corp-Wifi-1` and needs no AAA client (matrix B-14).
 
 **User setup:**
 

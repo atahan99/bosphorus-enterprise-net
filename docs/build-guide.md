@@ -265,29 +265,37 @@ PT rejects `no ip http server` and `logging trap informational` on every model, 
 
 ## Phase 8: wireless, voice, QoS
 
-**GUI:**
-
-1. LON-WLC-01, the four London APs, the six branch APs and the wireless clients ([wireless-and-endpoints.md](../configs/servers/wireless-and-endpoints.md)).
-2. Power adapters on LON-PH-01/02/03 (the branch phones were done in Phase 6).
+**Before you start (macOS):** quit apps that inspect other windows through the accessibility API (Raycast, DockDoor, Thaw, Flow, Jump Desktop Connect, ChatGPT "work with apps"). PT 9.0.1 crashed five times in Phase 8 in `NSAccessibility … GetWindow` while those were running: on pastes into the WLC web GUI, during a screenshot, and on simply switching windows. **Type** passwords in PT's browser, and press Ctrl+S after every GUI Apply.
 
 **Paste:**
 
 1. LON-VOICE-01: `Phase 2`, `Phase 8` and `Phase 7` sections.
-2. The `Phase 8: QoS` section on LON-EDGE-01, LON-EDGE-02, LON-WAN-01, IST-RTR-01, TOR-RTR-01.
+2. The `Phase 8: QoS` section on LON-EDGE-01, LON-EDGE-02, LON-WAN-01, IST-RTR-01, CHI-RTR-01, TOR-RTR-01. Attaching the policy resets EDGE-01's BGP session; re-enter `default-information originate` afterwards (B-37).
+
+**GUI** (all values in [wireless-and-endpoints.md](../configs/servers/wireless-and-endpoints.md)):
+
+1. LON-WLC-01 setup wizard from LON-MGMT-PC-01, then the `wifi-corp` / `wifi-guest` interfaces and the `BSP-GUEST` WLAN. Leave the management VLAN untagged (B-11, B-53).
+2. LON-SRV-AAA-01: Radius Port `1812`.
+3. London APs: Config → GigabitEthernet0 → **DHCP**.
+4. Branch APs: Port 1, both SSIDs WPA2-PSK (B-14), channels 1 and 6.
+5. Physical view: one city per site plus an Internet city, branch gear moved into its own building ([wireless-and-endpoints.md](../configs/servers/wireless-and-endpoints.md#physical-view-one-city-per-site)).
+6. Wireless clients: Wireless0 Port Status **On**, SSID and credentials, DHCP.
+7. Power adapters on LON-PH-01/02/03 if missing.
 
 **Verify:**
 
 | Command / action | Where | Expected |
 |---|---|---|
-| Wireless → All APs | WLC GUI | Four APs joined |
-| IP configuration | LON-LAPTOP-01, LON-SMARTPHONE-01 | 10.10.60.x |
-| IP configuration | LON-TABLET-01 | 10.10.70.x, DNS 192.0.2.53 |
-| IP configuration | IST/CHI/TOR laptops and tablets | 10.x.60.x (corp) and 10.x.70.x (guest) from the site's own DHCP |
-| `show ephone registered` | LON-VOICE-01 | Six phones |
-| Call between two London phones, then London ↔ each branch | Phones | Rings, connects |
-| `show policy-map interface GigabitEthernet0/0/0` | EDGE-01 | Classes listed; EF counters increase during a London ↔ Istanbul call |
+| Wireless → All APs | WLC GUI | Four APs joined (10.10.10.101–105) |
+| IP configuration | LON-LAPTOP-01, LON-SMARTPHONE-01 (WPA2-Enterprise) | Address assigned after RADIUS login: 10.10.10.x (B-53) |
+| IP configuration | LON-TABLET-01 | 10.10.10.x (B-53) |
+| IP configuration | IST/CHI/TOR laptops and tablets | 10.x.60.20 (corp) and 10.x.70.176+ (guest) from the site's own DHCP, joined to their own site's APs |
+| `show ephone` | LON-VOICE-01 | Five phones REGISTERED, 1001–1005 (LON-PH-03: B-52) |
+| Call London ↔ London, London ↔ Istanbul, Chicago ↔ Toronto | Phones (GUI tab) | Rings, both screens show Connected |
+| `show policy-map interface Serial0/1/0` | LON-WAN-01 | All classes present; CS3 (SCCP) and AF31 counters increase |
+| `show policy-map interface GigabitEthernet0/0/0` | EDGE-01 | PM-WAN-OUT classes with EF in strict priority |
 
-**Screenshots:** `phase8-wlc-aps.png`, `phase8-wlans.png`, `phase8-branch-wifi.png`, `phase8-ephones.png`, `phase8-call-lon-tor.png`, `phase8-qos-serial.png`.
+**Screenshots:** `phase8-wlans.png`, `phase8-wlc-interfaces.png`, `phase8-london-wifi-association.png`, `phase8-wifi-clients.png`, `phase8-ephones.png`, `phase8-call-lon-ist.png`, `phase8-qos-serial.png`, `phase8-qos-edge01.png`, plus `phase8-topology-full.png` and the close-ups `phase8-topology-part1-london-wireless-voice.png`, `part2-istanbul-chicago-wifi.png`, `part3-toronto-wifi.png`, `part4-phase-notes.png`.
 
 ---
 
