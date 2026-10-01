@@ -105,7 +105,7 @@ Full procedures, evidence and deviations are in [test-plan.md](docs/test-plan.md
 |---|---|
 | ✅ Pass (16) | Core switch, EtherChannel, branch switch and Toronto circuit failures; Chicago VPN and its backup tunnel; CHAP and OSPF authentication; SSH-only management with TACACS+ and local fallback; Wi-Fi credentials; voice calls to every site; NTP and syslog; unsolicited inbound traffic; DMZ isolation; BPDU guard; BGP advertisements |
 | ⚠️ Pass with deviation (5) | ACL policy matrix and guest isolation (London Wi-Fi clients share the management VLAN, a Packet Tracer WLC limitation); ISP-A and Istanbul tunnel failover (needed fixes during testing); DAI (configured, not enforced by PT) |
-| Not run (4) | Port security, rogue DHCP, root guard, QoS under congestion: each already proven, or not modelled, in the Phase 0 validation |
+| Not run (4) | Rogue DHCP and root guard (already shown in the Phase 0 validation), port security (seen enforcing during the build), QoS under congestion (not modelled reliably by PT; class counters shown instead) |
 | n/a (1) | Loop guard: not available in Packet Tracer |
 
 Testing also found and fixed three configuration bugs (a misrouted backup default on LON-CORE-01, wrong TACACS+ client addresses, and a voice VLAN ACL that broke the CME config backup) and two Packet Tracer quirks; details in [test-plan.md](docs/test-plan.md#summary).

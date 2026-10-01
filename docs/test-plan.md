@@ -245,7 +245,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Restore:** reconnect LON-PC-SALES-01, delete TEST-PC, `switchport port-security maximum 3`.
 
-**Evidence:** none (not run). **Actual:** Not run: Packet Tracer enforces port security (sticky MACs are learned on every access port in this lab); the swap test was judged low value against the setup cost.
+**Evidence:** none (not run). **Actual:** Not run as a test. Port security was seen enforcing during the build: in Phase 8, LON-SRV-SW01 Fa0/6 (maximum 2, restrict) blocked the lobby phone's new MAC and counted `Security Violation Count : 2` until the limit was raised (matrix B-52).
 
 ---
 
