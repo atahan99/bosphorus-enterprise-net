@@ -33,7 +33,7 @@ flowchart TB
   WAN -. "two private circuits (serial, PPP/CHAP)" .- TOR["Toronto: 36 staff, 10.40.0.0/16<br/>TOR-RTR-01, TOR-SW-01/02 pair, 2 APs"]
 ```
 
-Port-level cabling is in [cabling-plan.md](../docs/cabling-plan.md). The full Packet Tracer canvas is in [`screenshots/phase9-topology-full.png`](../screenshots/phase9-topology-full.png); the physical layout is in section 7.
+Port-level cabling is in [cabling-plan.md](../docs/cabling-plan.md). The full Packet Tracer canvas is in [`screenshots/topology/topology-full.png`](../screenshots/topology/topology-full.png); the physical layout is in section 7.
 
 ## 2. Layer 2 in London: VLANs, STP roots, HSRP
 

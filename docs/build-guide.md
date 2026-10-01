@@ -25,7 +25,7 @@ Tips:
 
 - Add a visible note box to the workspace with the phase number, site/subnet scope, active protocols and any Packet Tracer fallback used. Keep notes clear of devices and links.
 - Save a phase checkpoint as `pkt/phase-N.pkt`, then also refresh `pkt/bosphorus-enterprise-net.pkt` as the latest canonical copy.
-- Take the listed screenshots and save them in `screenshots/` with the given names. Capture the whole canvas as `phaseN-topology-full.png` **and** close-ups of the areas the phase touched as `phaseN-topology-part1-<area>.png`, `part2-…`, and so on: the whole workspace is too large to read on its own.
+- Take the phase's verification screenshots and combine them into one image under `screenshots/build/`, and add the canvas to `screenshots/topology/build-progression.png` (see [screenshots/README.md](../screenshots/README.md)).
 - Commit and tag: `git commit -m "Phase N: <summary>" && git tag phase-N`.
 
 ---
@@ -103,7 +103,7 @@ reload
 | `show version \| include Version 15` | Every 2960-24TT | `Version 15.0(2)SE4` |
 | `show cdp neighbors` | Any router or switch | Neighbors and ports match cabling-plan.md |
 
-**Screenshots:** `phase2-topology-full.png` (whole workspace, zoomed to fit).
+**Screenshots:** the whole canvas after this phase is a tile in [`topology/build-progression.png`](../screenshots/topology/build-progression.png).
 
 ---
 
@@ -140,7 +140,7 @@ Po1 should come up as `(SU)` with both members `(P)` within a few seconds.
 | `show port-security` | Access switches | Access ports listed |
 | `show ip dhcp snooping` | Access switches | Enabled on the listed VLANs, uplinks trusted |
 
-**Screenshots:** `phase3-etherchannel.png`, `phase3-stp-acc01-vlan10.png`, `phase3-stp-acc01-vlan20.png`, `phase3-trunks-core01.png`, plus the whole canvas `phase3-topology-full.png` and close-ups `phase3-topology-part1-london-edge-core.png`, `part2-london-access.png`, `part3-phase-notes.png`.
+**Screenshots:** [`build/phase3-switching.png`](../screenshots/build/phase3-switching.png) (Po1, trunks, STP roots); the canvas is in `topology/build-progression.png`.
 
 ---
 
@@ -162,7 +162,7 @@ Inter-VLAN ACLs aren't applied until Phase 7, so at this point every London VLAN
 | PC → IP Configuration → DHCP | Every London PC | Address in .100–.250 of their VLAN, gateway .1 |
 | `ping 10.10.80.13`, browse `http://intranet.corp.bosphorus.test` | LON-PC-ENG-01 | Works |
 
-**Screenshots:** `phase4-hsrp-core01.png`, `phase4-ospf-neighbors-core01.png`, `phase4-dhcp-pc-eng01.png`, plus `phase4-topology-full.png` and the close-ups `phase4-topology-part1-london-edge-core.png` … `part4-phase-notes.png`. GUI evidence: `phase4-aaa-clients-part1.png` … `part4.png`, `phase4-email-server-intra01.png`, `phase4-email-client-eng01.png`, `phase4-email-client-sales01.png`, `phase4-email-test-received.png`.
+**Screenshots:** [`build/phase4-routing.png`](../screenshots/build/phase4-routing.png) (OSPF, HSRP, DHCP) and [`build/phase4-email.png`](../screenshots/build/phase4-email.png).
 
 ---
 
@@ -193,7 +193,7 @@ Only EDGE-01 originates the OSPF default: PT load-shares two equal E2 defaults, 
 | Browse `http://203.0.113.10` and `http://www.bosphorus.test` | INET-HOST-01 | Public site loads |
 | Browse `http://www.bosphorus.test`, `nslookup www.bosphorus.test` | LON-PC-ENG-01 | Loads via split DNS (172.16.100.10); no new NAT entry |
 
-**Screenshots:** `phase5-bgp-summary-edge01.png`, `phase5-bgp-summary-edge02.png`, `phase5-bgp-table-inet-core.png`, `phase5-default-route-core01.png`, `phase5-default-route-core02.png`, `phase5-hsrp-dmz-edge01.png`, `phase5-nat-edge01.png`, `phase5-zbf-sessions-edge01.png`, `phase5-split-dns-pc-eng01.png`, `phase5-browse-from-internet.png`, plus `phase5-topology-full.png` and the close-ups `phase5-topology-part1-internet.png`, `part2-london-edge-dmz.png`, `part3-phase-notes.png`.
+**Screenshots:** [`build/phase5-bgp-default.png`](../screenshots/build/phase5-bgp-default.png) and [`build/phase5-nat-dmz.png`](../screenshots/build/phase5-nat-dmz.png).
 
 ---
 
@@ -238,7 +238,7 @@ Only EDGE-01 originates the OSPF default: PT load-shares two equal E2 defaults, 
 | Browse `http://www.example.test` | TOR-PC-01 | Works (via London's internet edge, PAT to 203.0.113.1) |
 | `show ip inspect sessions` | LON-EDGE-01 | CBAC sessions for BGP, IKE and published-service traffic |
 
-**Screenshots:** `phase6-branch-hsrp.png`, `phase6-ist-crypto-sa.png`, `phase6-chi-crypto-sa.png`, `phase6-ist-ospf-neighbors.png`, `phase6-chi-ospf-neighbors.png`, `phase6-core-branch-routes.png`, `phase6-tor-eigrp-neighbors.png`, `phase6-tor-sw-routes.png`, `phase6-edge01-cbac.png`, `phase6-branch-pings.png`, plus `phase6-topology-full.png` and the close-ups `phase6-topology-part1-istanbul-chicago.png`, `part2-toronto-wan.png`, `part3-london-edges-internet.png`, `part4-phase-notes.png`.
+**Screenshots:** [`build/phase6-vpns.png`](../screenshots/build/phase6-vpns.png) and [`build/phase6-branches.png`](../screenshots/build/phase6-branches.png).
 
 ---
 
@@ -262,7 +262,7 @@ PT rejects `no ip http server` and `logging trap informational` on every model, 
 | Ping LON-PC-FIN-01 | LON-PC-ENG-01 | **Fails** (policy): `Destination host unreachable` from the core |
 | Browse `http://intranet.corp.bosphorus.test` | LON-PC-ENG-01 | Works |
 
-**Screenshots:** `phase7-ssh-tacacs.png`, `phase7-syslog-server.png`, `phase7-ntp-status.png`, `phase7-acl-counters-core01.png`, plus `phase7-topology-full.png` and the close-ups `phase7-topology-part1-london-core-servers.png`, `part2-phase-notes.png`.
+**Screenshots:** [`build/phase7-security.png`](../screenshots/build/phase7-security.png).
 
 ---
 
@@ -298,7 +298,7 @@ PT rejects `no ip http server` and `logging trap informational` on every model, 
 | `show policy-map interface Serial0/1/0` | LON-WAN-01 | All classes present; CS3 (SCCP) and AF31 counters increase |
 | `show policy-map interface GigabitEthernet0/0/0` | EDGE-01 | PM-WAN-OUT classes with EF in strict priority |
 
-**Screenshots:** `phase8-wlans.png`, `phase8-wlc-interfaces.png`, `phase8-london-wifi-association.png`, `phase8-wifi-clients.png`, `phase8-ephones.png`, `phase8-call-lon-ist.png`, `phase8-qos-serial.png`, `phase8-qos-edge01.png`, plus `phase8-topology-full.png` and the close-ups `phase8-topology-part1-london-wireless-voice.png`, `part2-istanbul-chicago-wifi.png`, `part3-toronto-wifi.png`, `part4-phase-notes.png`.
+**Screenshots:** [`build/phase8-voice-qos.png`](../screenshots/build/phase8-voice-qos.png) and [`build/phase8-wireless.png`](../screenshots/build/phase8-wireless.png); the final canvas is [`topology/topology-full.png`](../screenshots/topology/topology-full.png).
 
 ---
 

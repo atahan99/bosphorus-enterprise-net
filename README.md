@@ -6,7 +6,7 @@ The scenario is fictional. Every design choice (which routing protocol runs wher
 
 > **Status:** built and tested. 26 tests: 16 pass, 5 pass with a documented deviation, 4 not run, 1 not possible in Packet Tracer ([results](#test-results)).
 
-![Logical topology](screenshots/phase9-topology-full.png)
+![Logical topology](screenshots/topology/topology-full.png)
 
 ---
 

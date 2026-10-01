@@ -1,6 +1,6 @@
 # Test plan
 
-Every test has a purpose, a procedure, the expected result and a place to record what actually happened. Evidence goes in `screenshots/` named by test ID (`T04-before-edge01.png`, `T04-after-routing.png`, ...).
+Every test has a purpose, a procedure, the expected result and a place to record what actually happened. Evidence goes in `screenshots/` named by test ID (`tests/T04-isp-a-failover.png`); before/after captures of a test are combined into one image.
 
 Run the tests after Phase 8, in order. Each test ends by restoring the lab to its normal state.
 
@@ -110,9 +110,9 @@ Rows 26–28 check that branch users and phones can't reach their own site's man
 
 Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same deny entries must now count on IST-SW-02, proving the policy survives a gateway failover.
 
-**Evidence:** `T01-acl-lon-core02.png`, `T01-acl-ist-sw01.png`, `T01-acl-ist-sw02.png`, `T01-acl-tor-sw01.png`.
+**Evidence:** [`tests/T01-acl-counters.png`](../screenshots/tests/T01-acl-counters.png).
 
-**Actual:** ⚠️ Every ✘ row was blocked and every ✔ row passed, with the ACL counters rising on the expected entries (`T01-acl-*.png`); browse rows checked by hand. Deviation: row 15 is reachable because London Wi-Fi clients are in VLAN 10 (matrix B-53). Row 13 first failed because LON-SRV-AAA-01 had IST-SW-01 and CHI-SW-01 registered with the wrong source addresses (10.x.0.2 instead of 10.x.0.14); after the correction, SSH reached `IST-SW-01>`. The 'connection refused' seen in between was `login block-for` quiet mode after the failed logins. First pings of a run can be lost to ARP; 4-packet runs were used. Row 28 and the failover repeat were not run.
+**Actual:** ⚠️ Every ✘ row was blocked and every ✔ row passed, with the ACL counters rising on the expected entries (`tests/T01-acl-counters.png`); browse rows checked by hand. Deviation: row 15 is reachable because London Wi-Fi clients are in VLAN 10 (matrix B-53). Row 13 first failed because LON-SRV-AAA-01 had IST-SW-01 and CHI-SW-01 registered with the wrong source addresses (10.x.0.2 instead of 10.x.0.14); after the correction, SSH reached `IST-SW-01>`. The 'connection refused' seen in between was `login block-for` quiet mode after the failed logins. First pings of a run can be lost to ARP; 4-packet runs were used. Row 28 and the failover repeat were not run.
 
 ---
 
@@ -128,7 +128,7 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 **Expected:** a few pings lost, then replies resume. On CORE-02 `show standby brief` shows **Active for all eight VLANs**; on LON-ACC-03 (where SALES-01 is connected) `show spanning-tree vlan 30` shows Gi0/2 as root port. After CORE-01 returns, preempt makes it Active again for 10/30/60/70.
 
-**Evidence:** `T02-ping-loss.png`, `T02-standby-core02-after.png`, `T02-stp-acc03-after.png`.
+**Evidence:** [`tests/T02-core-failure.png`](../screenshots/tests/T02-core-failure.png).
 
 **Actual:** ✅ LON-PC-SALES-01 44/50 (12% loss): six timeouts during the switchover, then replies. CORE-02 active for all eight VLANs; LON-ACC-03's VLAN 30 root port moved to Gi0/2. When CORE-01 returned it preempted 10/30/60/70, OSPF and Po1 recovered.
 
@@ -140,7 +140,7 @@ Repeat rows 17 and 26 once with IST-SW-01 powered off (or during T21): the same 
 
 **Expected:** no pings lost. `show etherchannel summary` shows Gi1/0/23 down and Po1 still `(SU)` with one member.
 
-**Evidence:** `T03-etherchannel-one-member.png`. **Actual:** ✅ 30/30 replies (0% loss) from LON-PC-SALES-01 with Gi1/0/23 shut; `Po1(SU) LACP Gig1/0/23(D) Gig1/0/24(P)`.
+**Evidence:** [`tests/T03-etherchannel.png`](../screenshots/tests/T03-etherchannel.png). **Actual:** ✅ 30/30 replies (0% loss) from LON-PC-SALES-01 with Gi1/0/23 shut; `Po1(SU) LACP Gig1/0/23(D) Gig1/0/24(P)`.
 
 ---
 
@@ -182,7 +182,7 @@ Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via E
 
 **Also check (matrix B-25):** before the failure, `show ip route 0.0.0.0` on LON-CORE-01 and LON-CORE-02 must show a single O*E2 path, advertised by 10.255.255.1 (EDGE-01).
 
-**Evidence:** `T04-before-*.png`, `T04-after-*.png`. **Actual:** ⚠️ With ISP-A Fa0/0 shut: EDGE-01 lost its default, INET-CORE kept only 203.0.113.0/24 via ISP-B, Istanbul ran on Tunnel1, and LON-PC-ENG-01 reached 192.0.2.10 as 203.0.113.2. **Bug found:** CORE-01's floating static pointed at LON-WAN-01, which has no default, so every VLAN whose gateway is CORE-01 lost the internet (LON-PC-SALES-01 0/4). Fixed to `ip route 0.0.0.0 0.0.0.0 10.255.0.10 250` (via CORE-02); SALES-01 then reached it via 203.0.113.2. Lowering EDGE-01's DMZ priority to 90 made EDGE-02 active. Restored with B-37 re-origination and `clear ip bgp *` on EDGE-02. INET-HOST-01 loads http://203.0.113.10 in the normal state; browsing during the failover was not repeated.
+**Evidence:** [`tests/T04-isp-a-failover.png`](../screenshots/tests/T04-isp-a-failover.png). **Actual:** ⚠️ With ISP-A Fa0/0 shut: EDGE-01 lost its default, INET-CORE kept only 203.0.113.0/24 via ISP-B, Istanbul ran on Tunnel1, and LON-PC-ENG-01 reached 192.0.2.10 as 203.0.113.2. **Bug found:** CORE-01's floating static pointed at LON-WAN-01, which has no default, so every VLAN whose gateway is CORE-01 lost the internet (LON-PC-SALES-01 0/4). Fixed to `ip route 0.0.0.0 0.0.0.0 10.255.0.10 250` (via CORE-02); SALES-01 then reached it via 203.0.113.2. Lowering EDGE-01's DMZ priority to 90 made EDGE-02 active. Restored with B-37 re-origination and `clear ip bgp *` on EDGE-02. INET-HOST-01 loads http://203.0.113.10 in the normal state; browsing during the failover was not repeated.
 
 ---
 
@@ -192,7 +192,7 @@ Everything is then back on EDGE-01: DMZ HSRP preempts, the cores show O*E2 via E
 
 **Expected:** before, the path goes via 10.255.1.1 (EDGE-01); after, via 10.255.1.5 (EDGE-02), and IST-RTR-01's routes point at Tunnel1.
 
-**Evidence:** `T05-tracert-before.png`, `T05-tracert-after.png`, `T05-ist-routes-after.png`. **Actual:** ⚠️ Before: via 10.255.1.1 (EDGE-01). With Tunnel0 shut, Istanbul first lost every London route: its IKE session to EDGE-02 was stuck in `MM_NO_STATE`, a PT state problem after reopening the lab (matrix B-54). Re-applying `crypto map CM-WAN` on both ends fixed it; routes then moved to Tunnel1 and the trace went via 10.255.1.5 → 10.255.0.6.
+**Evidence:** [`tests/T05-istanbul-tunnel.png`](../screenshots/tests/T05-istanbul-tunnel.png). **Actual:** ⚠️ Before: via 10.255.1.1 (EDGE-01). With Tunnel0 shut, Istanbul first lost every London route: its IKE session to EDGE-02 was stuck in `MM_NO_STATE`, a PT state problem after reopening the lab (matrix B-54). Re-applying `crypto map CM-WAN` on both ends fixed it; routes then moved to Tunnel1 and the trace went via 10.255.1.5 → 10.255.0.6.
 
 ---
 
@@ -210,7 +210,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 | `show ip route 10.30.20.0` | LON-CORE-01 | `O IA 10.30.20.0/24` via EDGE-01 |
 | Ping CHI-PC-01 from LON-MGMT-PC-01 | London | Works (London-initiated through the tunnel) |
 
-**Evidence:** `T06-chi-crypto.png`, `T06-core-chicago-route.png`. **Actual:** ✅ Two ISAKMP SAs QM_IDLE (198.51.100.2 and .6), encaps/decaps 464/480 and 274/249, OSPF FULL on Tunnel0, Tunnel1, Gi0/0/1 and Gi0/0/2; LON-CORE-01 has `O IA 10.30.20.0/24` via EDGE-01. The London-initiated ping was not run separately.
+**Evidence:** [`tests/T06-chicago-vpn.png`](../screenshots/tests/T06-chicago-vpn.png). **Actual:** ✅ Two ISAKMP SAs QM_IDLE (198.51.100.2 and .6), encaps/decaps 464/480 and 274/249, OSPF FULL on Tunnel0, Tunnel1, Gi0/0/1 and Gi0/0/2; LON-CORE-01 has `O IA 10.30.20.0/24` via EDGE-01. The London-initiated ping was not run separately.
 
 ---
 
@@ -220,7 +220,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** `show interfaces serial0/0/0` → line protocol **down**; EIGRP neighbor gone; debug shows CHAP failure. Restore `username LON-WAN-01 password Lab-Chap-1` and bounce the interface.
 
-**Evidence:** `T07-serial-down.png`. **Actual:** ✅ Serial0/0/0 `up, line protocol is down (disabled)`, `LCP Closed`; only the Se0/0/1 EIGRP neighbor remained. Restored. `debug ppp authentication` was not captured.
+**Evidence:** [`tests/T07-wrong-chap.png`](../screenshots/tests/T07-wrong-chap.png). **Actual:** ✅ Serial0/0/0 `up, line protocol is down (disabled)`, `LCP Closed`; only the Se0/0/1 EIGRP neighbor remained. Restored. `debug ppp authentication` was not captured.
 
 ---
 
@@ -230,7 +230,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** the adjacency with EDGE-01 drops after the dead timer (`show ip ospf neighbor`); traffic reroutes via CORE-02. Restore the correct key.
 
-**Evidence:** `T08-ospf-neighbor-down.png`. **Actual:** ✅ After the dead timer LON-EDGE-01 disappeared from CORE-01's OSPF neighbors. The correct key was restored; PT then crashed (matrix B-49) before the reroute could be captured. The reroute itself is shown by T02 and T04.
+**Evidence:** [`tests/T08-ospf-key-mismatch.png`](../screenshots/tests/T08-ospf-key-mismatch.png). **Actual:** ✅ After the dead timer LON-EDGE-01 disappeared from CORE-01's OSPF neighbors. The correct key was restored; PT then crashed (matrix B-49) before the reroute could be captured. The reroute itself is shown by T02 and T04.
 
 ---
 
@@ -306,7 +306,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** every call rings and connects; EF (voice) class counters increase on the Toronto circuit during that call.
 
-**Evidence:** `phase8-call-lon-ist.png`, `phase8-ephones.png`, `phase8-qos-serial.png`. **Actual:** ✅ By hand: LON-PH-01 called 1003 (LON-PH-02), 1005 (IST), 1002 (CHI) and 1001 (TOR); every call rang and connected (`phase8-call-lon-ist.png`). The EF counter check during the Toronto call is covered by T26.
+**Evidence:** [`build/phase8-voice-qos.png`](../screenshots/build/phase8-voice-qos.png). **Actual:** ✅ By hand: LON-PH-01 called 1003 (LON-PH-02), 1005 (IST), 1002 (CHI) and 1001 (TOR); every call rang and connected (`build/phase8-voice-qos.png`). The EF counter check during the Toronto call is covered by T26.
 
 ---
 
@@ -316,7 +316,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 **Expected:** `Clock is synchronized`, stratum from 10.10.80.12; the syslog server shows the message with the device's IP and a millisecond timestamp.
 
-**Evidence:** `T15-ntp.png`, `T15-syslog.png`. **Actual:** ✅ TOR-SW-01 `Clock is synchronized, stratum 2, reference is 10.10.80.12`; IST-RTR-01 clock in step. LON-SRV-OPS-01 holds messages from 11 devices across all four sites with millisecond timestamps. An unplugged port bounce on LON-ACC-01 generated no message.
+**Evidence:** [`tests/T15-ntp-syslog.png`](../screenshots/tests/T15-ntp-syslog.png). **Actual:** ✅ TOR-SW-01 `Clock is synchronized, stratum 2, reference is 10.10.80.12`; IST-RTR-01 clock in step. LON-SRV-OPS-01 holds messages from 11 devices across all four sites with millisecond timestamps. An unplugged port bounce on LON-ACC-01 generated no message.
 
 ---
 
@@ -331,7 +331,7 @@ Chicago uses GRE over IPsec to both London edges with OSPF area 2, like Istanbul
 
 On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the final `deny ip any any`.
 
-**Evidence:** `T16-acl-drops.png`. **Actual:** ✅ From INET-HOST-01: ping 203.0.113.53 and 203.0.113.1 0/4, `telnet 203.0.113.10` timed out; ACL-OUTSIDE-IN final `deny ip any any` 22 hits. Browsing http://203.0.113.10 from INET-HOST-01 loads the published site (checked by hand).
+**Evidence:** [`tests/T16-inbound-blocked.png`](../screenshots/tests/T16-inbound-blocked.png). **Actual:** ✅ From INET-HOST-01: ping 203.0.113.53 and 203.0.113.1 0/4, `telnet 203.0.113.10` timed out; ACL-OUTSIDE-IN final `deny ip any any` 22 hits. Browsing http://203.0.113.10 from INET-HOST-01 loads the published site (checked by hand).
 
 ---
 
@@ -341,7 +341,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Expected:** all fail. The DMZ → INSIDE policy only passes replies to connections opened from inside.
 
-**Evidence:** `T17-dmz-blocked.png`. **Actual:** ✅ LON-DMZ-WEB-01 → 10.10.80.10 and 10.10.10.50 both 0/4. Browsing 10.10.80.13 is a GUI step. Browsing http://10.10.80.13 from LON-DMZ-WEB-01 also fails (checked by hand).
+**Evidence:** [`tests/T17-dmz-blocked.png`](../screenshots/tests/T17-dmz-blocked.png). **Actual:** ✅ LON-DMZ-WEB-01 → 10.10.80.10 and 10.10.10.50 both 0/4. Browsing 10.10.80.13 is a GUI step. Browsing http://10.10.80.13 from LON-DMZ-WEB-01 also fails (checked by hand).
 
 ---
 
@@ -355,7 +355,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** remove the cable, then `shutdown` / `no shutdown` on Fa0/24.
 
-**Evidence:** `T18-err-disabled.png`, `T18-syslog.png`, `T18-root-unchanged.png`. **Actual:** ✅ LON-ROGUE-SW cabled to LON-ACC-01 Fa0/24 (cross-over): the port went err-disabled immediately, `%SPANTREE-2-BLOCK_BPDUGUARD` and `%PM-4-ERR_DISABLE` were logged locally and on LON-SRV-OPS-01 (11:34:58.420), and VLAN 20's root stayed LON-CORE-02 (priority 24596). Restored with the cable removed and `shutdown` / `no shutdown` on Fa0/24.
+**Evidence:** [`tests/T18-bpdu-guard.png`](../screenshots/tests/T18-bpdu-guard.png). **Actual:** ✅ LON-ROGUE-SW cabled to LON-ACC-01 Fa0/24 (cross-over): the port went err-disabled immediately, `%SPANTREE-2-BLOCK_BPDUGUARD` and `%PM-4-ERR_DISABLE` were logged locally and on LON-SRV-OPS-01 (11:34:58.420), and VLAN 20's root stayed LON-CORE-02 (priority 24596). Restored with the cable removed and `shutdown` / `no shutdown` on Fa0/24.
 
 ---
 
@@ -392,7 +392,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** power IST-SW-01 back on; it pre-empts VLANs 10, 20, 60.
 
-**Evidence:** `T21-ping-loss.png`, `T21-standby-sw02.png`, `T21-dhcp-upper-half.png`. **Actual:** ✅ IST-PC-02 37/40 (8% loss) with IST-SW-01 powered off; IST-SW-02 active for every VLAN; renewed lease 10.20.20.176 from IST-SW-02's upper-half scope; internet reachable through IST-SW-02's own router link. IST-SW-01 preempted 10/20/60 when back. Found afterwards: the reboot had err-disabled IST-SW-01's PC and phone ports through PT's DHCP snooping rate limit; fixed with `ip dhcp snooping limit rate 100` on every branch access port (matrix B-55).
+**Evidence:** [`tests/T21-branch-switch.png`](../screenshots/tests/T21-branch-switch.png). **Actual:** ✅ IST-PC-02 37/40 (8% loss) with IST-SW-01 powered off; IST-SW-02 active for every VLAN; renewed lease 10.20.20.176 from IST-SW-02's upper-half scope; internet reachable through IST-SW-02's own router link. IST-SW-01 preempted 10/20/60 when back. Found afterwards: the reboot had err-disabled IST-SW-01's PC and phone ports through PT's DHCP snooping rate limit; fixed with `ip dhcp snooping limit rate 100` on every branch access port (matrix B-55).
 
 ---
 
@@ -404,7 +404,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** `no shutdown`; EIGRP load-shares across both circuits again.
 
-**Evidence:** `T22-eigrp-one-circuit.png`. **Actual:** ✅ TOR-PC-01 38/40 (5% loss) with LON-WAN-01 Se0/1/0 shut; TOR-RTR-01 kept only the 10.255.2.5 neighbor, London routes via Serial0/0/1, TOR-PH-01 stayed registered (a call was not placed).
+**Evidence:** [`tests/T22-toronto-circuit.png`](../screenshots/tests/T22-toronto-circuit.png). **Actual:** ✅ TOR-PC-01 38/40 (5% loss) with LON-WAN-01 Se0/1/0 shut; TOR-RTR-01 kept only the 10.255.2.5 neighbor, London routes via Serial0/0/1, TOR-PH-01 stayed registered (a call was not placed).
 
 ---
 
@@ -414,7 +414,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Expected:** before, the path goes via 10.255.1.9 (EDGE-01); after, via 10.255.1.13 (EDGE-02), and CHI-RTR-01's London routes point at Tunnel1. LON-CORE-01 reaches the Chicago subnets via EDGE-02.
 
-**Evidence:** `T23-tracert-before.png`, `T23-tracert-after.png`. **Actual:** ✅ Before via 10.255.1.9 (EDGE-01); with Tunnel2 shut, CHI-RTR-01 routes via Tunnel1 and tracert goes 10.255.1.13 → 10.255.0.6; LON-CORE-01 reaches 10.30.20.0/24 via Gi1/0/21.
+**Evidence:** [`tests/T23-chicago-tunnel.png`](../screenshots/tests/T23-chicago-tunnel.png). **Actual:** ✅ Before via 10.255.1.9 (EDGE-01); with Tunnel2 shut, CHI-RTR-01 routes via Tunnel1 and tracert goes 10.255.1.13 → 10.255.0.6; LON-CORE-01 reaches 10.30.20.0/24 via Gi1/0/21.
 
 ---
 
@@ -428,7 +428,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** disconnect TEST-PC and return the port to its documented test/spare state.
 
-**Evidence:** `T24-dai-active.png`. **Actual:** ⚠️ LON-ACC-01 VLAN 20 DAI `Enabled / Active`, counters 0 (`T24-dai-active.png`). The TEST-PC spoofing step was not run: Phase 0 (matrix P0-05a) already showed PT forwards ARP from unbound hosts.
+**Evidence:** [`tests/T24-dai.png`](../screenshots/tests/T24-dai.png). **Actual:** ⚠️ LON-ACC-01 VLAN 20 DAI `Enabled / Active`, counters 0 (`tests/T24-dai.png`). The TEST-PC spoofing step was not run: Phase 0 (matrix P0-05a) already showed PT forwards ARP from unbound hosts.
 
 ---
 
@@ -444,7 +444,7 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Expected:** ISP-A learns only `203.0.113.0/25` and `203.0.113.128/25` from EDGE-01; ISP-B learns only `203.0.113.0/24` from EDGE-02. INET-CORE reaches 203.0.113.10 through ISP-A (longest match on the /25). No private prefix is ever announced, because the edges have `network` statements only for the public block (PT has no outbound prefix-list, matrix P0-11c).
 
-**Evidence:** `T25-isp-a-learned.png`, `T25-inet-core-route.png`. **Actual:** ✅ ISP-A learns only 203.0.113.0/25 and .128/25 from EDGE-01; ISP-B learns 203.0.113.0/24 from EDGE-02; INET-CORE routes 203.0.113.0/25 via ISP-A (longest match for .10); both edges receive 0.0.0.0/0; no private prefix anywhere.
+**Evidence:** [`tests/T25-bgp.png`](../screenshots/tests/T25-bgp.png). **Actual:** ✅ ISP-A learns only 203.0.113.0/25 and .128/25 from EDGE-01; ISP-B learns 203.0.113.0/24 from EDGE-02; INET-CORE routes 203.0.113.0/25 via ISP-A (longest match for .10); both edges receive 0.0.0.0/0; no private prefix anywhere.
 
 ---
 
@@ -470,4 +470,4 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 
 **Restore:** stop the traffic generators or delete the Complex PDUs; reapply `service-policy output PM-WAN-OUT` if removed; `interface Serial0/1/1` → `no shutdown` and confirm EIGRP load-shares across both circuits again.
 
-**Evidence:** none (not run). **Actual:** Not run: PT's queuing model is approximate and congestion tests were the highest crash risk in this lab (matrix B-49). Classification and queuing are shown by the class counters instead (`phase8-qos-serial.png`: CS3 and AF31 matches on the Toronto circuit).
+**Evidence:** none (not run). **Actual:** Not run: PT's queuing model is approximate and congestion tests were the highest crash risk in this lab (matrix B-49). Classification and queuing are shown by the class counters instead (`build/phase8-voice-qos.png`: CS3 and AF31 matches on the Toronto circuit).
