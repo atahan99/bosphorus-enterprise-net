@@ -128,3 +128,5 @@ Packet Tracer implements a subset of IOS. Where a production network would use s
 ---
 
 *All company, site and domain names in this project are fictional. Addressing uses RFC 1918 and RFC 5737 documentation ranges; the internal domain uses the reserved `.test` TLD.*
+
+© 2026 Atahan. All rights reserved; shared for viewing as a portfolio project.
