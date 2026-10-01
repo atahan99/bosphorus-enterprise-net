@@ -64,6 +64,8 @@ The server picks the pool whose gateway matches the relaying SVI's subnet, so th
 | CHI-SW-01, CHI-SW-02 | 10.30.0.14, 10.30.0.6 | 10.30.0.9, 10.30.0.10 (VLAN 900) | Lab-Tacacs-1 | Tacacs |
 | LON-WLC-01 | 10.10.10.20 | — | Lab-Radius-1 | Radius |
 
+**Check after entry (Phase 9, T01 row 13):** the lab file had IST-SW-01 entered as `10.20.0.2` and CHI-SW-01 as `10.30.0.2`; their TACACS+ requests come from `10.20.0.14` and `10.30.0.14` (the router links), so London MGMT logins to those switches were rejected. Correct the two rows to the addresses in the table above.
+
 If a login shows `% Login invalid` although the password is right, the server answered from a client IP it doesn't know. IOS only falls back to the local user when the server is unreachable, not when it rejects, so every config also has a console-only local list (`aaa authentication login CONSOLE local`) as a way back in.
 
 LON-DMZ-SW01 uses local accounts only (see its config).

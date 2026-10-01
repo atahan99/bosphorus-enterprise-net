@@ -4,7 +4,7 @@ A four-site enterprise network built and tested in **Cisco Packet Tracer 9.0.1**
 
 The scenario is fictional. Every design choice (which routing protocol runs where, how failover works, what each zone may reach) is justified in the docs and verified by a written test plan, including tests that deliberately break things.
 
-> **Status:** design, configs and test plan complete; lab build in progress. See [Build progress](#build-progress).
+> **Status:** lab built (Phases 0–8) and tested (Phase 9: 16 pass, 5 pass with deviation, 4 not run; see [test-plan.md](docs/test-plan.md)); final documentation in progress. See [Build progress](#build-progress).
 
 ---
 
@@ -92,7 +92,7 @@ Every site has user, voice, corporate Wi-Fi and guest Wi-Fi VLANs, and no single
 | 6 | Remote sites and VPNs | ✅ |
 | 7 | Security and management | ✅ |
 | 8 | Wireless, voice, QoS | ✅ |
-| 9 | Testing | ⏳ |
+| 9 | Testing | ✅ |
 | 10 | Documentation and blog | ⏳ |
 
 ## Opening the lab
