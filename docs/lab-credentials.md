@@ -23,6 +23,8 @@ Every secret in this lab, in one place. **These are lab-only values**, published
 | NTP key 1 | `Lab-Ntp-1` | All devices ↔ LON-SRV-OPS-01 |
 | SNMP RO community | `BSP-RO-Lab` | All IOS devices (restricted to the MGMT subnet) |
 | Mail users | `alice` / `Lab-Mail-1`, `bob` / `Lab-Mail-2` | LON-SRV-INTRA-01 |
+| IoT server account | `cctv` / `Lab-Iot-1` | LON-SRV-IOT-01 dashboard; every CCTV camera registers with it |
+| RIP authentication | — | Not configured: Packet Tracer has no RIP authentication (matrix B-56) |
 
 ## Console access
 

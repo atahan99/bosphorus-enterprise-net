@@ -1,6 +1,6 @@
 Building configuration...
 
-Current configuration : 6201 bytes
+Current configuration : 7108 bytes
 !
 version 15.0
 service timestamps log datetime msec
@@ -34,7 +34,7 @@ vtp domain BOSPHORUS
 vtp mode transparent
 !
 !
-ip dhcp snooping vlan 10,50
+ip dhcp snooping vlan 10,50,90
 no ip dhcp snooping information option
 ip dhcp snooping
 !
@@ -49,6 +49,9 @@ vlan 50
 !
 vlan 80
  name SERVERS
+!
+vlan 90
+ name CCTV
 !
 vlan 998
  name PARKING
@@ -131,19 +134,40 @@ interface FastEthernet0/6
  spanning-tree bpduguard enable
 !
 interface FastEthernet0/7
- switchport access vlan 998
+ description LON-SRV-IOT-01 (IoT registration server)
+ switchport access vlan 80
  switchport mode access
- shutdown
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0050.0F08.2C73
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
 interface FastEthernet0/8
- switchport access vlan 998
+ description CCTV (LON-CAM-01, server room)
+ switchport access vlan 90
  switchport mode access
- shutdown
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0002.1725.015D
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
 interface FastEthernet0/9
- switchport access vlan 998
+ description CCTV (LON-CAM-02, lobby)
+ switchport access vlan 90
  switchport mode access
- shutdown
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0002.1679.AC4A
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
 interface FastEthernet0/10
  switchport access vlan 998
@@ -230,7 +254,7 @@ interface FastEthernet0/24
 interface GigabitEthernet0/1
  description TO-LON-CORE-01-Gi1/0/5
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,50,80,999
+ switchport trunk allowed vlan 10,50,80,90,999
  ip dhcp snooping trust
  switchport mode trunk
  switchport nonegotiate
@@ -238,7 +262,7 @@ interface GigabitEthernet0/1
 interface GigabitEthernet0/2
  description TO-LON-CORE-02-Gi1/0/5
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,50,80,999
+ switchport trunk allowed vlan 10,50,80,90,999
  ip dhcp snooping trust
  switchport mode trunk
  switchport nonegotiate
@@ -287,6 +311,3 @@ ntp trusted-key 1
 ntp server 10.10.80.12 key 1
 !
 end
-
-
-

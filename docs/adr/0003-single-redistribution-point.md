@@ -24,3 +24,4 @@ The original design also tagged each direction (100 and 110) and used route-maps
 
 - With a single point, routing loops can't form, with or without tags.
 - Toronto has two circuits into LON-WAN-01, so a circuit failure is covered; LON-WAN-01 itself is a single point of failure for Toronto, accepted and documented. Moving the second circuit to a second London router would need a second redistribution point, which is only safe with the tag-and-deny route-maps; in production they would come back first.
+- Phase 11 added a second, one-way point at TOR-RTR-01 for the RIP warehouse. It needs no tags because the warehouse has one exit and only receives a default ([ADR 0016](0016-rip-warehouse-second-redistribution.md)).

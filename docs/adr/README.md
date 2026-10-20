@@ -19,3 +19,4 @@ Short records of the significant design decisions: context, decision, alternativ
 | [0013](0013-branch-wifi-autonomous-aps.md) | Autonomous APs with local switching for branch Wi-Fi |
 | [0014](0014-branch-switch-pairs.md) | Redundant switch pairs at the branches |
 | [0015](0015-cbac-not-zbf.md) | CBAC and ACLs instead of a zone-based firewall |
+| [0016](0016-rip-warehouse-second-redistribution.md) | RIPv2 at the Toronto warehouse, redistributed one way at TOR-RTR-01 |

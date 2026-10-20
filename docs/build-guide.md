@@ -298,7 +298,7 @@ PT rejects `no ip http server` and `logging trap informational` on every model, 
 | `show policy-map interface Serial0/1/0` | LON-WAN-01 | All classes present; CS3 (SCCP) and AF31 counters increase |
 | `show policy-map interface GigabitEthernet0/0/0` | EDGE-01 | PM-WAN-OUT classes with EF in strict priority |
 
-**Screenshots:** [`build/phase8-voice-qos.png`](../screenshots/build/phase8-voice-qos.png) and [`build/phase8-wireless.png`](../screenshots/build/phase8-wireless.png); the final canvas is [`topology/topology-full.png`](../screenshots/topology/topology-full.png).
+**Screenshots:** [`build/phase8-voice-qos.png`](../screenshots/build/phase8-voice-qos.png) and [`build/phase8-wireless.png`](../screenshots/build/phase8-wireless.png).
 
 ---
 
@@ -319,3 +319,68 @@ Run every test in [test-plan.md](test-plan.md) and record the results there, wit
 3. Update the README's build-progress table and test-results summary.
 4. Finish the blog draft (kept locally in `blog/`, which is git-ignored) with the screenshots.
 5. Push to GitHub, set the repo description and topics (`cisco`, `packet-tracer`, `networking`, `ccna`, `ccnp`, `network-security`, `bgp`, `ospf`, `ipsec`).
+
+---
+
+## Phase 11: Toronto warehouse on RIPv2
+
+Adds a stub warehouse behind TOR-RTR-01 ([ADR 0016](adr/0016-rip-warehouse-second-redistribution.md)). OSPF, BGP and LON-WAN-01 are not touched.
+
+**Place and cable** ([cabling plan](cabling-plan.md#cctv-and-warehouse-phases-1112)): TOR-WH-RTR-01 (ISR4331), TOR-WH-SW-01 (2960-24TT), TOR-WH-PC-01, inside Toronto's box on the canvas and in a `warehouse` building in the Toronto city of the physical view. Links W1 (TOR-RTR-01 Gi0/2 ↔ TOR-WH-RTR-01 Gi0/0/0) and W2 (router Gi0/0/1 ↔ switch Gi0/1).
+
+**Paste:**
+
+1. TOR-WH-RTR-01: `Phase 11: base, RIP, DHCP`.
+2. TOR-RTR-01: `Phase 11`.
+3. TOR-WH-SW-01: `Phase 11: switching`, then upgrade it to IOS 15 from LON-SRV-OPS-01 (B-24: `copy tftp: flash:` → `boot system` → `write memory` → `reload`), then `Phase 11: Layer 2 security` and `Phase 11: management plane`.
+4. TOR-WH-RTR-01: `Phase 11: management plane`.
+5. TOR-SW-01 and TOR-SW-02: `Phase 11` (closes WH MGMT to Toronto users).
+6. If LON-WAN-01 has no default route, re-enter `default-information originate` on LON-EDGE-01 (B-37).
+
+**GUI:** LON-SRV-AAA-01 → AAA: TACACS+ clients `TOR-WH-RTR-01` 10.40.0.14 and `TOR-WH-SW-01` 10.40.102.2, key `Lab-Tacacs-1`. TOR-WH-PC-01: DHCP.
+
+PT has no RIP authentication (B-56), and `passive-interface default` doesn't cover a subinterface added later (B-57), so the config lists Gi0/0/1.90 explicitly.
+
+**Verify:**
+
+| Command / action | Where | Expected |
+|---|---|---|
+| `show ip protocols` | TOR-WH-RTR-01 | RIPv2, only Gi0/0/0 active |
+| `show ip route rip` | TOR-WH-RTR-01 | `R* 0.0.0.0/0 via 10.40.0.13` |
+| `show ip route` | TOR-SW-01 | `D EX` 10.40.100.0/24, .101.0/24, .102.0/24 |
+| `show ip route \| include 10.40.` | LON-WAN-01, LON-CORE-01 | Only 10.40.0.0/16, as before |
+| `ping 10.10.80.13` | TOR-WH-PC-01 | Replies |
+
+**Screenshots:** [`build/phase11-rip-warehouse.png`](../screenshots/build/phase11-rip-warehouse.png).
+
+---
+
+## Phase 12: CCTV zone (VLAN 90)
+
+Adds VLAN 90 at every site and the warehouse, an IoT registration server in London and 12 IoT webcams.
+
+**Before you start:** pasting the Phase 12 trunk lines onto Po1 member ports drops Po1 to `(SD)` on both switches (B-59). Paste both switches of a pair, then re-bundle each at once (members `shutdown` / `no channel-group 1` / `channel-group 1 mode active` / `no shutdown`) and check `show etherchannel summary` shows `(SU)`.
+
+**Place and cable:** LON-SRV-IOT-01 (Server-PT) on LON-SRV-SW01 Fa0/7, and the cameras per the [cabling plan](cabling-plan.md#cctv-and-warehouse-phases-1112): each next to its switch on the canvas and in its site's office building in the physical view. Use the webcam's built-in **GigabitEthernet3**.
+
+**Paste the `Phase 12` sections** on LON-CORE-01/02, LON-SRV-SW01, LON-ACC-01, LON-ACC-03, IST/CHI/TOR-SW-01/02, TOR-WH-SW-01 and TOR-WH-RTR-01, re-bundling Po1 on each pair as above.
+
+**GUI** (values in [servers.md](../configs/servers/servers.md#lon-srv-iot-01)):
+
+1. LON-SRV-CORE-01 → DHCP: pool `VLAN90-CCTV` (10.10.90.0/24, gateway 10.10.90.1, start .100, 151 users).
+2. LON-SRV-IOT-01: static 10.10.80.14/24, gateway 10.10.80.1; Services → IoT **On**.
+3. LON-MGMT-PC-01 → Web Browser → `http://10.10.80.14` → sign up `cctv` / `Lab-Iot-1`.
+4. Every camera: Config → Wireless0 **off**; Settings → IoT Server → Remote Server `10.10.80.14`, `cctv` / `Lab-Iot-1`. Check the server address has no stray characters.
+5. London cameras: GigabitEthernet3 **DHCP**. Branch and warehouse cameras: GigabitEthernet3 **static** .11 (SW-01) / .12 (SW-02) with mask **255.0.0.0** (B-58, B-60: the webcam never uses a static gateway, so it reaches the server through its gateway's proxy ARP).
+6. Power-cycle each camera once: it registers at boot (B-61). Each extra registration adds a stale row to the dashboard.
+
+**Verify:**
+
+| Command / action | Where | Expected |
+|---|---|---|
+| `show standby brief` | LON-CORE-01, branch SW-02s | VLAN 90 active on CORE-01 and on SW-02 at each branch |
+| `show access-lists ACL-CCTV-IN` | Every camera gateway | `eq 31000` counter rising; `deny ip any any` stable |
+| `http://10.10.80.14` | LON-MGMT-PC-01 | All 12 cameras online |
+| `ping` a camera | Any user PC | `Destination host unreachable` from its gateway |
+
+**Screenshots:** [`build/phase12-cctv.png`](../screenshots/build/phase12-cctv.png); the final canvas is [`topology/topology-full.png`](../screenshots/topology/topology-full.png).

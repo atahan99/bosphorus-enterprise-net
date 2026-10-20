@@ -1,6 +1,6 @@
 Building configuration...
 
-Current configuration : 16147 bytes
+Current configuration : 17133 bytes
 !
 version 16.3.2
 service timestamps log datetime msec
@@ -71,9 +71,9 @@ username netadmin privilege 15 secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
 !
 !
 !
-ip arp inspection vlan 20,50,60,70
+ip arp inspection vlan 20,50,60,70,90
 !
-ip dhcp snooping vlan 20,50,60,70
+ip dhcp snooping vlan 20,50,60,70,90
 no ip dhcp snooping information option
 ip dhcp snooping
 !
@@ -88,7 +88,7 @@ vtp mode transparent
 !
 spanning-tree mode rapid-pvst
 spanning-tree vlan 10,20,60,900 priority 24576
-spanning-tree vlan 50,70 priority 28672
+spanning-tree vlan 50,70,90 priority 28672
 !
 !
 !
@@ -110,6 +110,9 @@ vlan 60
 vlan 70
  name WIFI-GUEST
 !
+vlan 90
+ name CCTV
+!
 vlan 900
  name TRANSIT
 !
@@ -125,7 +128,7 @@ interface Loopback0
 interface Port-channel1
  description TO-CHI-SW-02-Po1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,50,60,70,900,999
+ switchport trunk allowed vlan 10,20,50,60,70,90,900,999
  switchport mode trunk
  switchport nonegotiate
 !
@@ -384,9 +387,18 @@ interface GigabitEthernet1/0/18
  spanning-tree bpduguard enable
 !
 interface GigabitEthernet1/0/19
- switchport access vlan 998
+ description CCTV (CHI-CAM-01, static 10.30.90.11)
+ ip dhcp snooping limit rate 100
+ switchport access vlan 90
  switchport mode access
- shutdown
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 00D0.9756.0752
+ spanning-tree portfast
+ ip arp inspection trust
+ spanning-tree bpduguard enable
 !
 interface GigabitEthernet1/0/20
  switchport access vlan 998
@@ -421,7 +433,7 @@ interface GigabitEthernet1/0/23
  description TO-CHI-SW-02-Po1
  ip dhcp snooping trust
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,50,60,70,900,999
+ switchport trunk allowed vlan 10,20,50,60,70,90,900,999
  switchport mode trunk
  switchport nonegotiate
  ip arp inspection trust
@@ -431,7 +443,7 @@ interface GigabitEthernet1/0/24
  description TO-CHI-SW-02-Po1
  ip dhcp snooping trust
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,50,60,70,900,999
+ switchport trunk allowed vlan 10,20,50,60,70,90,900,999
  switchport mode trunk
  switchport nonegotiate
  ip arp inspection trust
@@ -500,6 +512,15 @@ interface Vlan70
  standby 70 ip 10.30.70.1
  standby 70 preempt
 !
+interface Vlan90
+ description CCTV
+ mac-address 00e0.a36b.3607
+ ip address 10.30.90.2 255.255.255.0
+ ip access-group ACL-CCTV-IN in
+ standby version 2
+ standby 90 ip 10.30.90.1
+ standby 90 preempt
+!
 interface Vlan900
  description TRANSIT-TO-CHI-SW-02
  mac-address 00e0.a36b.3606
@@ -534,6 +555,7 @@ ip access-list extended ACL-BRANCH-DATA-IN
  permit udp any host 224.0.0.102 eq 1985
  permit udp any any eq bootps
  deny ip any 10.30.10.0 0.0.0.255
+ deny ip any 10.30.90.0 0.0.0.255
  deny ip any 10.30.0.0 0.0.0.255
  permit ip 10.30.0.0 0.0.255.255 10.30.0.0 0.0.255.255
  permit tcp 10.30.0.0 0.0.255.255 10.10.10.0 0.0.0.255 established
@@ -561,6 +583,7 @@ ip access-list extended ACL-BRANCH-VOICE-IN
  permit udp any host 224.0.0.102 eq 1985
  permit udp any any eq bootps
  deny ip any 10.30.10.0 0.0.0.255
+ deny ip any 10.30.90.0 0.0.0.255
  deny ip any 10.30.0.0 0.0.0.255
  permit ip 10.30.50.0 0.0.0.255 10.30.0.0 0.0.255.255
  permit ip 10.30.50.0 0.0.0.255 10.10.50.0 0.0.0.255
@@ -578,6 +601,13 @@ ip access-list extended ACL-WIFI-GUEST-IN
  permit ip 10.30.70.0 0.0.0.255 any
 access-list 99 remark MGMT-SUBNET-ONLY
 access-list 99 permit 10.10.10.0 0.0.0.255
+ip access-list extended ACL-CCTV-IN
+ remark Cameras: HSRP, DHCP, then IoT registration (TCP 31000) to LON-SRV-IOT-01 only
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.30.90.0 0.0.0.255 10.30.90.0 0.0.0.255
+ permit tcp 10.30.90.0 0.0.0.255 host 10.10.80.14 eq 31000
+ deny ip any any
 !
 banner motd ^C
 Authorized access only. bosphorus-enterprise-net lab environment.
@@ -615,6 +645,3 @@ ntp trusted-key 1
 ntp server 10.10.80.12 key 1
 !
 end
-
-
-

@@ -1,6 +1,6 @@
 Building configuration...
 
-Current configuration : 10583 bytes
+Current configuration : 10904 bytes
 !
 version 15.0
 service timestamps log datetime msec
@@ -33,9 +33,9 @@ username netadmin secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
 vtp domain BOSPHORUS
 vtp mode transparent
 !
-ip arp inspection vlan 20,50
+ip arp inspection vlan 20,50,90
 !
-ip dhcp snooping vlan 10,20,50
+ip dhcp snooping vlan 10,20,50,90
 no ip dhcp snooping information option
 ip dhcp snooping
 !
@@ -50,6 +50,9 @@ vlan 20
 !
 vlan 50
  name VOICE
+!
+vlan 90
+ name CCTV
 !
 vlan 998
  name PARKING
@@ -326,9 +329,16 @@ interface FastEthernet0/21
  shutdown
 !
 interface FastEthernet0/22
- switchport access vlan 998
+ description CCTV (LON-CAM-03, entrance)
+ switchport access vlan 90
  switchport mode access
- shutdown
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0001.96BA.5442
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
 interface FastEthernet0/23
  description LON-AP-01
@@ -359,7 +369,7 @@ interface FastEthernet0/24
 interface GigabitEthernet0/1
  description TO-LON-CORE-01-Gi1/0/1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,50,999
+ switchport trunk allowed vlan 10,20,50,90,999
  ip arp inspection trust
  ip dhcp snooping trust
  switchport mode trunk
@@ -368,7 +378,7 @@ interface GigabitEthernet0/1
 interface GigabitEthernet0/2
  description TO-LON-CORE-02-Gi1/0/1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,50,999
+ switchport trunk allowed vlan 10,20,50,90,999
  ip arp inspection trust
  ip dhcp snooping trust
  switchport mode trunk
@@ -418,6 +428,3 @@ ntp trusted-key 1
 ntp server 10.10.80.12 key 1
 !
 end
-
-
-

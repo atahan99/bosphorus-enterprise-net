@@ -26,6 +26,8 @@ Power off a device (Physical tab) before adding modules, then power it back on.
 | CHI-SW-01, CHI-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
 | TOR-RTR-01 | ISR2911 | **HWIC-2T** in GUI slot 0 → Serial0/0/0–1. With MCP, install it using slot `0/0` |
 | TOR-SW-01, TOR-SW-02 | 3650-24PS | **AC-POWER-SUPPLY** |
+| TOR-WH-RTR-01 | ISR4331 | None (Phase 11) |
+| TOR-WH-SW-01 | 2960-24TT | None; upgrade to IOS 15 (B-24) before its Layer 2 security section (Phase 11) |
 | ISP-A, ISP-B, INET-CORE | Router-PT | Replace the modules in slots **4 and 5** with **PT-ROUTER-NM-1CFE**: Router-PT ships with fiber FastEthernet (PT-ROUTER-NM-1FFE) there, which won't take the copper cables below. Port names stay FastEthernet4/0 and 5/0. BGP on Router-PT was verified in Phase 0 |
 | INET-SW | 2960-24TT | None |
 
@@ -44,19 +46,21 @@ The lab places a **representative sample** of endpoints: enough to test every po
 | Device | PT model | Prep |
 |---|---|---|
 | LON-SRV-CORE-01, -AAA-01, -OPS-01, -INTRA-01 | Server-PT | None |
+| LON-SRV-IOT-01 | Server-PT | Services → IoT **On** (Phase 12) |
+| LON-CAM-01 … 04, IST/CHI/TOR-CAM-01 … 02, TOR-WH-CAM-01 … 02 | Webcam (IoT) | Cable the built-in **GigabitEthernet3**; turn **Wireless0** off (matrix B-61). No power adapter needed |
 | LON-DMZ-WEB-01, LON-DMZ-DNS-01 | Server-PT | None |
 | INET-WEB-01, INET-DNS-01 | Server-PT | None |
 | LON-VOICE-01 | 2811 | None |
 | LON-PH-01 … 03 | IP Phone 7960 | **Power adapter** (London access switches have no PoE) |
 | IST-PH-01, CHI-PH-01, TOR-PH-01 | IP Phone 7960 | None: powered by the 3650's PoE (add a power adapter only if it doesn't power up) |
 | LON-PC-ENG-01 … 03, LON-PC-SALES-01 … 02, LON-PC-FIN-01 … 02, LON-MGMT-PC-01 | PC-PT | None |
-| IST-PC-01 … 02, CHI-PC-01 … 02, TOR-PC-01 … 02, INET-HOST-01 | PC-PT | None |
+| IST-PC-01 … 02, CHI-PC-01 … 02, TOR-PC-01 … 02, TOR-WH-PC-01, INET-HOST-01 | PC-PT | None |
 | LON-PRN-01, LON-PRN-02 | Printer-PT | None (branch printer ports are configured but not populated) |
 | LON-LAPTOP-01, IST-LAPTOP-01, CHI-LAPTOP-01, TOR-LAPTOP-01 | Laptop-PT | Swap NIC for **WPC300N** |
 | LON-SMARTPHONE-01 | Smartphone-PT | None |
 | LON-TABLET-01, IST-TABLET-01, CHI-TABLET-01, TOR-TABLET-01 | TabletPC-PT | None |
 
-**Count:** 9 routers/firewalls (3 of them the simulated internet), 8 L3 switches (2 London cores + 3 branch pairs), 7 connected L2 switches plus 1 disconnected rogue switch, 1 WLC, 10 APs, 8 servers, 1 call manager, ~35 endpoints.
+**Count:** 10 routers (3 of them the simulated internet), 8 L3 switches (2 London cores + 3 branch pairs), 8 connected L2 switches plus 1 disconnected rogue switch, 1 WLC, 10 APs, 9 servers, 1 call manager, 12 IoT cameras, ~36 other endpoints.
 
 ## 2. Infrastructure links
 
@@ -110,6 +114,8 @@ Every branch pair uses the same ports: Gi1/0/22 uplink, Gi1/0/23–24 the LACP b
 | B12 | TOR-RTR-01 | Gi0/1 | TOR-SW-02 | Gi1/0/22 | Straight | Routed /30 |
 | B13 | TOR-SW-01 | Gi1/0/23 | TOR-SW-02 | Gi1/0/23 | Cross | Po1 member |
 | B14 | TOR-SW-01 | Gi1/0/24 | TOR-SW-02 | Gi1/0/24 | Cross | Po1 member |
+| W1 | TOR-RTR-01 | Gi0/2 | TOR-WH-RTR-01 | Gi0/0/0 | Straight (auto-MDIX on Gigabit) | Routed /30, RIPv2 (Phase 11) |
+| W2 | TOR-WH-RTR-01 | Gi0/0/1 | TOR-WH-SW-01 | Gi0/1 | Straight | Trunk (10, 20, 90; native 999) |
 
 ### Simulated internet
 
@@ -150,6 +156,21 @@ Totals: 40 ENG + 25 SALES + 15 FIN-HR = **80 desk ports** (96 FE ports, 10 spare
 
 Totals: Istanbul 30 desks (9 spare), Chicago and Toronto 36 desks each (3 spare). Desks and APs are split across the pair, so losing one switch takes out only its half.
 
+### CCTV and warehouse (Phases 11–12)
+
+| Switch | Port | Device | VLAN |
+|---|---|---|---|
+| LON-SRV-SW01 | Fa0/7 | LON-SRV-IOT-01 | 80 |
+| LON-SRV-SW01 | Fa0/8, Fa0/9 | LON-CAM-01 (server room), LON-CAM-02 (lobby) | 90 |
+| LON-ACC-01 | Fa0/22 | LON-CAM-03 (entrance) | 90 |
+| LON-ACC-03 | Fa0/22 | LON-CAM-04 (car park) | 90 |
+| IST/CHI/TOR-SW-01 | Gi1/0/19 | xxx-CAM-01 | 90 |
+| IST/CHI/TOR-SW-02 | Gi1/0/19 | xxx-CAM-02 (one camera per switch, so a switch failure leaves one camera) | 90 |
+| TOR-WH-SW-01 | Fa0/1 | TOR-WH-PC-01 | 20 |
+| TOR-WH-SW-01 | Fa0/2, Fa0/3 | TOR-WH-CAM-01, TOR-WH-CAM-02 | 90 |
+
+Every camera port: access VLAN 90, port security (max 1, sticky), PortFast, BPDU guard; static cameras also `ip arp inspection trust`.
+
 ### Internet
 
 | Switch | Port | Device |
@@ -167,7 +188,7 @@ Suggested placement so screenshots read left to right:
 - **Top band:** INET-CORE, ISP-A, ISP-B and the internet servers.
 - **Centre:** London. Edge pair and DMZ at the top; the core pair below; the four access switches and the services switch in a row underneath, with APs, phones and PCs below them.
 - **Right:** Istanbul under ISP-A, Chicago under ISP-B, each switch pair side by side.
-- **Bottom left:** LON-WAN-01 and Toronto.
+- **Bottom left:** LON-WAN-01 and Toronto: one outer box with an office zone and a warehouse zone. Cameras sit next to their switch, inside their site's box.
 - Use PT's rectangle/note tools to draw a labelled box around each site. Use **Logical workspace clusters** (one per site) if the canvas gets crowded.
 
 ## 5. Done-when for Phase 2

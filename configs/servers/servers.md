@@ -23,6 +23,7 @@ The default pool `serverPool` can't be deleted. Leave it alone: its default gate
 | VLAN50-VOICE | 10.10.50.1 | 10.10.80.10 | 10.10.50.100 | **10.10.50.10** | — |
 | VLAN60-WIFI-CORP | 10.10.60.1 | 10.10.80.10 | 10.10.60.100 | — | — |
 | VLAN70-WIFI-GUEST | 10.10.70.1 | **192.0.2.53** | 10.10.70.100 | — | — |
+| VLAN90-CCTV | 10.10.90.1 | — | 10.10.90.100 | — | — |
 
 The server picks the pool whose gateway matches the relaying SVI's subnet, so the gateway field must be exactly right. Guests get the public DNS server so they never query internal DNS.
 
@@ -44,7 +45,7 @@ The server picks the pool whose gateway matches the relaying SVI's subnet, so th
 
 ### Services → AAA (On)
 
-**Network configuration (clients).** Packet Tracer has no `ip tacacs source-interface` (matrix B-01), so each device's TACACS+ request comes from the interface it leaves by. Register that address. Where a second path exists, add the backup-path address as another client so logins still work after a failover. Packet Tracer needs a unique client name per entry, so each backup address is its own row named `<HOSTNAME>-B` (for example `LON-WAN-01-B` / 10.255.0.18), and rows that list two switches become one entry per switch: **27 client entries** in all (26 Tacacs, 1 Radius). The first 25 were entered in the Phase 4 build; `CHI-RTR-01` and `CHI-RTR-01-B` were added when the Chicago ASA was replaced by a router in Phase 6 ([ADR 0007](../../docs/adr/0007-chicago-router-not-asa.md)).
+**Network configuration (clients).** Packet Tracer has no `ip tacacs source-interface` (matrix B-01), so each device's TACACS+ request comes from the interface it leaves by. Register that address. Where a second path exists, add the backup-path address as another client so logins still work after a failover. Packet Tracer needs a unique client name per entry, so each backup address is its own row named `<HOSTNAME>-B` (for example `LON-WAN-01-B` / 10.255.0.18), and rows that list two switches become one entry per switch: **29 client entries** in all (28 Tacacs, 1 Radius). The first 25 were entered in the Phase 4 build; `CHI-RTR-01` and `CHI-RTR-01-B` were added when the Chicago ASA was replaced by a router in Phase 6 ([ADR 0007](../../docs/adr/0007-chicago-router-not-asa.md)); the two warehouse devices in Phase 11.
 
 | Client name | Client IP | Also add (backup path) | Secret | Type |
 |---|---|---|---|---|
@@ -62,6 +63,8 @@ The server picks the pool whose gateway matches the relaying SVI's subnet, so th
 | IST-SW-01, IST-SW-02 | 10.20.0.14, 10.20.0.6 | — | Lab-Tacacs-1 | Tacacs |
 | TOR-SW-01, TOR-SW-02 | 10.40.0.2, 10.40.0.6 | — | Lab-Tacacs-1 | Tacacs |
 | CHI-SW-01, CHI-SW-02 | 10.30.0.14, 10.30.0.6 | 10.30.0.9, 10.30.0.10 (VLAN 900) | Lab-Tacacs-1 | Tacacs |
+| TOR-WH-RTR-01 | 10.40.0.14 | — | Lab-Tacacs-1 | Tacacs |
+| TOR-WH-SW-01 | 10.40.102.2 | — | Lab-Tacacs-1 | Tacacs |
 | LON-WLC-01 | 10.10.10.20 | — | Lab-Radius-1 | Radius |
 
 **Check after entry (Phase 9, T01 row 13):** the lab file had IST-SW-01 entered as `10.20.0.2` and CHI-SW-01 as `10.30.0.2`; their TACACS+ requests come from `10.20.0.14` and `10.30.0.14` (the router links), so London MGMT logins to those switches were rejected. Both rows were corrected to the addresses in the table above, after which London MGMT logged in to IST-SW-01 with TACACS+.
@@ -107,6 +110,41 @@ The TACACS+ password is deliberately different from the local fallback password 
 |---|---|
 | HTTP / HTTPS | On. Edit `index.html`: replace the body with `<h1>Intranet</h1><p>corp.bosphorus.test - internal only</p>` |
 | EMAIL | On. Domain name `corp.bosphorus.test`. Users: `alice` / `Lab-Mail-1`, `bob` / `Lab-Mail-2` |
+
+---
+
+## LON-SRV-IOT-01
+
+IoT registration server for the CCTV zone (Phase 12).
+
+**IP:** 10.10.80.14 / 255.255.255.0, gateway 10.10.80.1 (on LON-SRV-SW01 Fa0/7, VLAN 80).
+
+| Setting | Value |
+|---|---|
+| Services → IoT | On |
+| Account | `cctv` / `Lab-Iot-1`, created from LON-MGMT-PC-01's browser (`http://10.10.80.14` → Sign up) |
+| Registration | Cameras connect on **TCP 31000**; ACL-CCTV-IN permits only that, to this host |
+| Security view | LON-MGMT-PC-01 → Web Browser → `http://10.10.80.14/home.html`: all 12 cameras with their state |
+
+### Cameras (PT "Webcam")
+
+| Camera | Switch / port | IP configuration (GigabitEthernet3) |
+|---|---|---|
+| LON-CAM-01 server room, LON-CAM-02 lobby | LON-SRV-SW01 Fa0/8, Fa0/9 | DHCP (pool VLAN90-CCTV) |
+| LON-CAM-03 entrance | LON-ACC-01 Fa0/22 | DHCP |
+| LON-CAM-04 car park | LON-ACC-03 Fa0/22 | DHCP |
+| IST-CAM-01 / -02 | IST-SW-01 / -02 Gi1/0/19 | Static 10.20.90.11 / .12, mask 255.0.0.0 |
+| CHI-CAM-01 / -02 | CHI-SW-01 / -02 Gi1/0/19 | Static 10.30.90.11 / .12, mask 255.0.0.0 |
+| TOR-CAM-01 / -02 | TOR-SW-01 / -02 Gi1/0/19 | Static 10.40.90.11 / .12, mask 255.0.0.0 |
+| TOR-WH-CAM-01 / -02 | TOR-WH-SW-01 Fa0/2, Fa0/3 | Static 10.40.101.11 / .12, mask 255.0.0.0 |
+
+On every camera: Config → **Wireless0** off; Settings → IoT Server → **Remote Server** `10.10.80.14`, user `cctv`, password `Lab-Iot-1`. Then power-cycle the camera once: it registers at boot.
+
+Why the branch cameras look odd (matrix B-58, B-60, B-61):
+
+- **Static, not DHCP:** the switches' IOS DHCP server pings an address before offering it, and the webcam gives up before the offer arrives.
+- **Mask /8, no gateway:** the webcam never uses a static default gateway even when its Settings page shows one. With 255.0.0.0 it treats the London server as local and ARPs for it; the site gateway answers by proxy ARP (IOS default) and routes the traffic. The ACL and the TCP 31000 restriction apply as normal.
+- **Duplicates in the dashboard:** every registration adds a row; stale rows show red.
 
 ---
 

@@ -1,6 +1,6 @@
 Building configuration...
 
-Current configuration : 16025 bytes
+Current configuration : 16649 bytes
 !
 version 16.3.2
 service timestamps log datetime msec
@@ -29,7 +29,7 @@ aaa authentication login default group tacacs+ local
 !
 !
 !
-ip cef
+no ip cef
 ip routing
 !
 no ipv6 cef
@@ -57,7 +57,7 @@ vtp domain BOSPHORUS
 vtp mode transparent
 !
 spanning-tree mode rapid-pvst
-spanning-tree vlan 10,30,60,70,900,999 priority 24576
+spanning-tree vlan 10,30,60,70,90,900,999 priority 24576
 spanning-tree vlan 20,40,50,80 priority 28672
 !
 !
@@ -89,6 +89,9 @@ vlan 70
 vlan 80
  name SERVERS
 !
+vlan 90
+ name CCTV
+!
 vlan 900
  name TRANSIT
 !
@@ -104,14 +107,14 @@ interface Loopback0
 interface Port-channel1
  description TO-LON-CORE-02-Po1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,30,40,50,60,70,80,900,999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,90,900,999
  switchport mode trunk
  switchport nonegotiate
 !
 interface GigabitEthernet1/0/1
  description TO-LON-ACC-01-Gi0/1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,50,999
+ switchport trunk allowed vlan 10,20,50,90,999
  switchport mode trunk
  switchport nonegotiate
  spanning-tree guard root
@@ -127,7 +130,7 @@ interface GigabitEthernet1/0/2
 interface GigabitEthernet1/0/3
  description TO-LON-ACC-03-Gi0/1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,30,50,999
+ switchport trunk allowed vlan 10,30,50,90,999
  switchport mode trunk
  switchport nonegotiate
  spanning-tree guard root
@@ -143,7 +146,7 @@ interface GigabitEthernet1/0/4
 interface GigabitEthernet1/0/5
  description TO-LON-SRV-SW01-Gi0/1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,50,80,999
+ switchport trunk allowed vlan 10,50,80,90,999
  switchport mode trunk
  switchport nonegotiate
  spanning-tree guard root
@@ -248,7 +251,7 @@ interface GigabitEthernet1/0/22
 interface GigabitEthernet1/0/23
  description TO-LON-CORE-02-Po1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,30,40,50,60,70,80,900,999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,90,900,999
  switchport mode trunk
  switchport nonegotiate
  channel-group 1 mode active
@@ -256,7 +259,7 @@ interface GigabitEthernet1/0/23
 interface GigabitEthernet1/0/24
  description TO-LON-CORE-02-Po1
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,30,40,50,60,70,80,900,999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,90,900,999
  switchport mode trunk
  switchport nonegotiate
  channel-group 1 mode active
@@ -357,6 +360,17 @@ interface Vlan80
  standby version 2
  standby 80 ip 10.10.80.1
  standby 80 preempt
+!
+interface Vlan90
+ description CCTV
+ mac-address 00d0.5845.9c0a
+ ip address 10.10.90.2 255.255.255.0
+ ip helper-address 10.10.80.10
+ ip access-group ACL-CCTV-IN in
+ standby version 2
+ standby 90 ip 10.10.90.1
+ standby 90 priority 110
+ standby 90 preempt
 !
 interface Vlan900
  description TRANSIT-TO-LON-CORE-02
@@ -533,6 +547,13 @@ ip access-list extended ACL-VOICE-IN
  permit udp host 10.10.50.10 host 10.10.80.12
  remark --- no internet, no other internal access ---
  deny ip any any
+ip access-list extended ACL-CCTV-IN
+ remark Cameras: HSRP, DHCP, then IoT registration (TCP 31000) to LON-SRV-IOT-01 only
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.10.90.0 0.0.0.255 10.10.90.0 0.0.0.255
+ permit tcp 10.10.90.0 0.0.0.255 host 10.10.80.14 eq 31000
+ deny ip any any
 !
 banner motd ^C
 Authorized access only. bosphorus-enterprise-net lab environment.
@@ -570,6 +591,3 @@ ntp trusted-key 1
 ntp server 10.10.80.12 key 1
 !
 end
-
-
-

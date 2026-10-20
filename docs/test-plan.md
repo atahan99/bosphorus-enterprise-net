@@ -2,7 +2,7 @@
 
 Every test has a purpose, a procedure, the expected result and a place to record what actually happened. Evidence goes in `screenshots/` named by test ID (`tests/T04-isp-a-failover.png`); before/after captures of a test are combined into one image.
 
-Run the tests after Phase 8, in order. Each test ends by restoring the lab to its normal state.
+Run the tests after Phase 8, in order. T27–T29 cover Phases 11 and 12 and run after those phases. Each test ends by restoring the lab to its normal state.
 
 **Result legend:** ✅ pass · ⚠️ pass with deviation (explain) · ❌ fail
 
@@ -36,8 +36,13 @@ Run the tests after Phase 8, in order. Each test ends by restoring the lab to it
 | T24 | Dynamic ARP Inspection active on the access switches | ⚠️ |
 | T25 | BGP advertisements and inbound preference | ✅ |
 | T26 | QoS under congestion on a Toronto circuit | not run |
+| T27 | Toronto warehouse on RIPv2 (adjacency, default, redistribution, London unchanged) | ⚠️ |
+| T28 | CCTV: every camera registers to the London IoT server | ✅ |
+| T29 | CCTV: cameras isolated from users, users isolated from cameras | ✅ |
 
 **Phase 9 run (2026-10-01):** 16 ✅, 5 ⚠️, 4 not run, 1 n/a, no test ❌ overall. Every failover test recovered and the lab was restored after each one. Restore points: `pkt/phase-9-wip1.pkt` … `wip6.pkt` (not committed).
+
+**Phases 11–12 run (2026-10-20):** T27 ⚠️ (works; PT has no RIP authentication, matrix B-56), T28 ✅, T29 ✅. Spot checks of T01 after the new deny lines: London, Toronto and warehouse users still reach LON-SRV-INTRA-01. T22 was not re-run for the warehouse: the warehouse hangs off TOR-RTR-01, whose survival of a circuit failure T22 already shows, and serial failover churn was the most frequent PT crash trigger (B-49).
 
 **Issues found by the tests:**
 
@@ -471,3 +476,44 @@ On LON-EDGE-01: `show ip access-lists ACL-OUTSIDE-IN` shows the hits on the fina
 **Restore:** stop the traffic generators or delete the Complex PDUs; reapply `service-policy output PM-WAN-OUT` if removed; `interface Serial0/1/1` → `no shutdown` and confirm EIGRP load-shares across both circuits again.
 
 **Evidence:** none (not run). **Actual:** Not run: PT's queuing model is approximate and congestion tests were the highest crash risk in this lab (matrix B-49). Classification and queuing are shown by the class counters instead (`build/phase8-voice-qos.png`: CS3 and AF31 matches on the Toronto circuit).
+
+---
+
+## T27: Toronto warehouse on RIPv2
+
+**Purpose:** show that the warehouse is reachable through RIP, that the second redistribution point stays one-way, and that London's tables don't change ([ADR 0016](adr/0016-rip-warehouse-second-redistribution.md)).
+
+**Procedure:**
+
+1. On TOR-WH-RTR-01: `show ip protocols` and `show ip route rip`.
+2. On TOR-RTR-01 and TOR-SW-01: `show ip route` (warehouse subnets 10.40.100–102.0/24).
+3. On LON-WAN-01 and LON-CORE-01: `show ip route | include 10.40.`.
+4. Failure: on TOR-RTR-01 `interface GigabitEthernet0/2` → `shutdown`, repeat steps 2–3, then `no shutdown`.
+
+**Expected:** RIPv2 sends and receives only on Gi0/0/0; the warehouse has `R* 0.0.0.0/0` from 10.40.0.13. TOR-RTR-01 has the three warehouse /24s as R routes and TOR-SW-01 as `D EX`. London shows only `10.40.0.0/16`, before, during and after the failure. With the link shut the D EX routes are withdrawn; they return when it comes back.
+
+**Evidence:** [`tests/T27-rip-warehouse.png`](../screenshots/tests/T27-rip-warehouse.png). **Actual:** ⚠️ As expected. The deviation: PT has no `ip rip` interface commands, so the planned MD5 authentication (and the wrong-key test) is impossible (matrix B-56). The test also found the camera subinterface Gi0/0/1.90 sending RIP updates: `passive-interface default` hadn't applied to it because it was created later (B-57); fixed with an explicit passive line.
+
+---
+
+## T28: CCTV camera registration
+
+**Purpose:** prove every camera reaches LON-SRV-IOT-01 across the site's WAN path (VPN, EIGRP circuits, RIP) and that a security PC sees all of them.
+
+**Procedure:** on LON-MGMT-PC-01 open `http://10.10.80.14`, log in as `cctv` and list the devices. On every camera gateway, `show access-lists ACL-CCTV-IN` and read the `eq 31000` counter. Optionally, in Simulation mode, power-cycle one branch camera and read the IoT server's PDU details.
+
+**Expected:** 12 cameras online (green); the TCP 31000 permit counts at every site; the simulation shows `REGISTER_DEVICE` from the branch camera.
+
+**Evidence:** [`tests/T28-cctv-registration.png`](../screenshots/tests/T28-cctv-registration.png). **Actual:** ✅ All 12 cameras online in the dashboard (checked by hand on LON-MGMT-PC-01). TCP 31000 matches on LON-CORE-01, IST-SW-02, CHI-SW-02, TOR-SW-02 and TOR-WH-RTR-01. Simulation of IST-CAM-01 showed `REGISTER_DEVICE` and `deviceOnline` pushed to the management PC. Getting there needed three PT workarounds: branch cameras are static (B-58), their gateway works through proxy ARP (B-60), and they register at boot (B-61). The dashboard keeps stale duplicate rows from earlier attempts.
+
+---
+
+## T29: CCTV isolation
+
+**Purpose:** show that cameras reach nothing but the IoT server, and that no user VLAN can reach a camera.
+
+**Procedure:** from LON-PC-ENG-01, IST-PC-01, TOR-PC-01 and TOR-WH-PC-01 ping a camera at the same site; from TOR-PC-01 and TOR-WH-PC-01 ping the warehouse switch (10.40.102.2). Read the deny counters in ACL-BRANCH-DATA-IN, ACL-WH-DATA-IN and ACL-CCTV-IN. Confirm users still reach LON-SRV-INTRA-01.
+
+**Expected:** every camera and WH MGMT ping fails with `Destination host unreachable` from the user's gateway; the matching deny lines count; ACL-CCTV-IN permits only TCP 31000 to 10.10.80.14 and denies the rest (the cameras' DNS broadcasts land there); intranet pings still work.
+
+**Evidence:** [`tests/T29-cctv-isolation.png`](../screenshots/tests/T29-cctv-isolation.png). **Actual:** ✅ As expected. London users are blocked by the existing allow-list ACLs (no new lines needed); branch and warehouse users by the new deny lines. Intranet reachability unchanged (TOR-PC-01 2/4 with ARP, LON-PC-ENG-01 and TOR-WH-PC-01 4/4).

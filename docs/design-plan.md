@@ -24,6 +24,7 @@ The project has to show that I can:
 | Wi-Fi at every site: WLC + lightweight APs in London, autonomous APs at branches | |
 | CME voice for all four sites, WAN QoS | |
 | AAA, SSH, NTP, Syslog, SNMP, TFTP backups | |
+| v1.2: RIPv2 warehouse at Toronto (Phase 11), CCTV zone with IoT cameras at every site (Phase 12) | |
 
 ## 3. Scenario
 
@@ -34,7 +35,7 @@ A fictional professional-services company with **182 staff** across four sites a
 | **London (LON)** | 80 | HQ | Dual-homed to two ISPs with its own address space, which is what makes **BGP** necessary. Redundant collapsed core, OSPF area 0, the server room, DMZ and call control for the whole company. |
 | **Istanbul (IST)** | 30 | Regional office | Runs a routing protocol over its VPN: **OSPF area 1** over GRE/IPsec with a backup tunnel, extended to its two site switches. |
 | **Chicago (CHI)** | 36 | Office with its own internet breakout | Same pattern as Istanbul: **OSPF area 2** over GRE/IPsec to both London edges, extended to its two site switches. (First designed behind an ASA; replaced by a router, [ADR 0007](adr/0007-chicago-router-not-asa.md).) |
-| **Toronto (TOR)** | 36 | Recently acquired company | Kept its legacy **EIGRP** design and private circuits; integrated by **redistribution** at a single point. No local internet: it uses London's. |
+| **Toronto (TOR)** | 36 | Recently acquired company | Kept its legacy **EIGRP** design and private circuits; integrated by **redistribution** at a single point. No local internet: it uses London's. Its warehouse (TOR-WH) still runs **RIPv2** behind TOR-RTR-01 ([ADR 0016](adr/0016-rip-warehouse-second-redistribution.md)). |
 
 The Toronto circuits are modelled as PT serial links. In reality they would be carrier Ethernet or MPLS services; the limitation is recorded in the support matrix.
 
@@ -105,7 +106,7 @@ See [cabling-plan.md §1](cabling-plan.md#1-devices-and-modules) for models and 
 - **Wired 802.1X** was exercised in Phase 0: the IOS 15 2960 accepts and enforces it, but Packet Tracer's PC never completes the EAP exchange (matrix P0-06). It is not applied to the main lab access ports; wireless 802.1X demonstrates RADIUS, while production would add wired 802.1X with MAB and a staged rollout.
 - **Rogue switch demo:** LON-ROGUE-SW is pre-configured with bridge priority 0 for VLAN 20 and left disconnected; it's cabled to LON-ACC-01 Fa0/24 (a spare desk port) only for tests T18–T19.
 
-**Branches** use a smaller version of the same idea ([ADR 0014](adr/0014-branch-switch-pairs.md)): two 3650s acting as collapsed core and access, joined by a two-link LACP bundle (Po1) that carries every VLAN plus a routed transit VLAN 900. Each switch has its own routed uplink to the branch router or firewall, half the desks and one AP. SW-01 is STP root and HSRP active for VLANs 10, 20, 60; SW-02 for 50 and 70.
+**Branches** use a smaller version of the same idea ([ADR 0014](adr/0014-branch-switch-pairs.md)): two 3650s acting as collapsed core and access, joined by a two-link LACP bundle (Po1) that carries every VLAN plus a routed transit VLAN 900. Each switch has its own routed uplink to the branch router or firewall, half the desks and one AP. SW-01 is STP root and HSRP active for VLANs 10, 20, 60; SW-02 for 50, 70 and 90.
 
 ## 7. Layer 3
 
@@ -133,6 +134,13 @@ Every site routes on L3 switch SVIs with HSRP. (Router-on-a-stick is still exerc
 - Router IDs from Loopback0.
 - Summarisation at the ABRs: `area 0 range 10.10.0.0 255.255.0.0`, so each branch sees one London route. The branches are **not** summarised into area 0: with two branch areas on the same ABRs, Packet Tracer generated only one of the two ranges, a different one on each load (B-48), so London carries the ~10 subnets of each branch instead. Production would add `area 1 range 10.20.0.0/16` and `area 2 range 10.30.0.0/16`.
 - Tunnel costs can't be set in Packet Tracer (B-40). Both tunnels of a branch have the same cost; EDGE-02's cost-1000 core link makes EDGE-01 the primary path in both directions, and the EDGE-02 tunnel is a hot standby.
+
+### RIPv2 (Toronto warehouse)
+
+- RIPv2 runs only on the TOR-RTR-01 Gi0/2 ↔ TOR-WH-RTR-01 Gi0/0/0 link: `version 2`, `no auto-summary`, `passive-interface default` with that one interface active. PT has no RIP authentication (matrix B-56).
+- TOR-RTR-01 sends the warehouse a default only (`default-information originate`) and redistributes RIP into EIGRP (`redistribute rip metric 1000000 10 255 1 1500`). Nothing goes from EIGRP into RIP.
+- The warehouse range 10.40.100.0/22 sits inside the 10.40.0.0/16 summary TOR-RTR-01 sends to London, so OSPF, BGP and LON-WAN-01 see no change. This second, one-way redistribution point is safe without route tags because the warehouse has one exit and no other routes to re-advertise ([ADR 0016](adr/0016-rip-warehouse-second-redistribution.md)).
+- The warehouse routes VLANs 10/20/90 on its router (router-on-a-stick) and serves its own user DHCP.
 
 ### EIGRP AS 100 (Toronto) and redistribution
 
@@ -202,6 +210,9 @@ Inside ↔ DMZ is stateless because the DMZ gateway can move to EDGE-02 while in
 | VOICE | ✘ | ✘ | ✘ | CME / TFTP only | ✔ | ✘ |
 | WIFI-CORP | ✘ | ✔ | ✘ | ✔ | ✘ | ✔ |
 | WIFI-GUEST | ✘ | ✘ | ✘ | DHCP relay only | ✘ | ✔ |
+| CCTV | ✘ | ✘ | ✘ | LON-SRV-IOT-01, TCP 31000 only | ✘ | ✘ |
+
+No VLAN can reach CCTV (VLAN 90): cameras answer only the IoT server, so even MGMT gets no reply and the cameras are managed through the IoT dashboard. London's user ACLs already end in `deny ip any 10.0.0.0`; branch and warehouse user/voice ACLs got an explicit deny for the local camera subnet, because they trust their own /16.
 
 **Branches:** users, voice and corporate Wi-Fi are trusted within their own branch. Inbound ACLs on both branch gateway switches enforce off-site policy: user and corporate Wi-Fi can use approved London services and peer user networks but cannot reach London MGMT, FIN-HR or voice; voice can reach CME and the other voice subnets but has no internet access. None of them can reach their own site's management VLAN (10.x.10.0/24) or routed transit links (10.x.0.0/24); branch devices are managed only from London MGMT. Branch corporate Wi-Fi counts as a peer user network, so the London user and corporate Wi-Fi ACLs also permit traffic to 10.x.60.0/24; without that, sessions from branch Wi-Fi to London users would be allowed outbound and silently dropped on the reply. Guest Wi-Fi allows DHCP and internet only. The ACLs are installed on both HSRP peers so policy survives a gateway failover.
 
@@ -227,6 +238,7 @@ Inside ↔ DMZ is stateless because the DMZ gateway can move to EDGE-02 while in
 | AAA | LON-SRV-AAA-01 | TACACS+ for device logins and RADIUS for wireless. Wired 802.1X stays a production delta: PT's PC never completes EAP (P0-06). |
 | Ops | LON-SRV-OPS-01 | Syslog, NTP, TFTP |
 | Intranet, mail | LON-SRV-INTRA-01 | HTTP intranet, email between a few PCs |
+| IoT registration (CCTV) | LON-SRV-IOT-01 | Server-PT IoT service at 10.10.80.14. All 12 webcams register on TCP 31000; the security view is the dashboard in LON-MGMT-PC-01's browser. London cameras use DHCP; branch and warehouse cameras are static (matrix B-58, B-60) |
 
 ## 12. Wireless
 
@@ -269,8 +281,10 @@ Every site has the same two SSIDs:
 | LON-WAN-01 down | none | **Accepted SPOF** for Toronto (fix: terminate the second circuit on a second London router) |
 | IST-RTR-01, CHI-RTR-01, TOR-RTR-01 or a branch ISP down | none | **Accepted SPOF** per branch (fix: router/firewall HA pair, second ISP or LTE backup) |
 | LON-WLC-01 down | none | **Accepted SPOF** (fix: HA pair) |
+| TOR-WH-RTR-01, TOR-WH-SW-01 or the warehouse link down | none | **Accepted SPOF** for the stub warehouse; Toronto and London are unaffected (T27) |
+| LON-SRV-IOT-01 down | none | Cameras offline in the dashboard until it returns. **Accepted SPOF** |
 | LON-VOICE-01 down | none | No calls anywhere. **Accepted SPOF** (fix: CUCM cluster, SRST at branches) |
 
 ## 15. Build, test and documentation
 
-The lab was built in ten phases, each ending with a saved `.pkt` checkpoint and a Git tag: [build-guide.md](build-guide.md) has the steps and verification commands. The 26 tests, with procedures and results, are in [test-plan.md](test-plan.md). Everything Packet Tracer couldn't do, and the fallback used, is in [pt-support-matrix.md](pt-support-matrix.md).
+The lab was built in ten phases, then extended in Phases 11 (RIP warehouse) and 12 (CCTV), each ending with a saved `.pkt` checkpoint: [build-guide.md](build-guide.md) has the steps and verification commands. The 29 tests, with procedures and results, are in [test-plan.md](test-plan.md). Everything Packet Tracer couldn't do, and the fallback used, is in [pt-support-matrix.md](pt-support-matrix.md).

@@ -7,9 +7,9 @@ One file per device, named after its hostname, grouped by site:
 | `lon/` | London edge, core, WAN, access and DMZ switches, voice router, rogue test switch |
 | `ist/` | Istanbul router and switch pair |
 | `chi/` | Chicago router and switch pair |
-| `tor/` | Toronto router and switch pair |
+| `tor/` | Toronto router and switch pair; warehouse router and switch (`TOR-WH-*`, Phase 11) |
 | `internet/` | ISP-A, ISP-B, INET-CORE, INET-SW |
-| `servers/` | Server-PT, WLC, phone and endpoint settings (GUI-configured, written as checklists) |
+| `servers/` | Server-PT, WLC, phone, IoT server and camera settings (GUI-configured, written as checklists) |
 
 ## File types
 

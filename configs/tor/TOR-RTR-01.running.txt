@@ -1,6 +1,6 @@
 Building configuration...
 
-Current configuration : 5416 bytes
+Current configuration : 5674 bytes
 !
 version 15.1
 service timestamps log datetime msec
@@ -127,10 +127,10 @@ interface GigabitEthernet0/1
  speed auto
 !
 interface GigabitEthernet0/2
- no ip address
+ description TO-TOR-WH-RTR-01-Gi0/0/0
+ ip address 10.40.0.13 255.255.255.252
  duplex auto
  speed auto
- shutdown
 !
 interface Serial0/0/0
  description TO-LON-WAN-01-Se0/1/0
@@ -160,10 +160,19 @@ interface Vlan1
 !
 router eigrp 100
  eigrp router-id 10.255.255.21
+ redistribute rip metric 1000000 10 255 1 1500 
  passive-interface Loopback0
  network 10.255.2.0 0.0.0.7
  network 10.40.0.0 0.0.0.7
  network 10.255.255.21 0.0.0.0
+!
+router rip
+ version 2
+ passive-interface default
+ no passive-interface GigabitEthernet0/2
+ network 10.0.0.0
+ default-information originate
+ no auto-summary
 !
 ip classless
 !
@@ -236,6 +245,3 @@ ntp trusted-key 1
 ntp server 10.10.80.12 key 1
 !
 end
-
-
-

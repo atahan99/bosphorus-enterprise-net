@@ -9,7 +9,7 @@ Single source of truth for every VLAN, subnet and interface address. Configs are
 | 10.10.0.0/16 | London (HQ) |
 | 10.20.0.0/16 | Istanbul |
 | 10.30.0.0/16 | Chicago |
-| 10.40.0.0/16 | Toronto |
+| 10.40.0.0/16 | Toronto (including the warehouse, 10.40.100.0/22) |
 | 10.x.0.0/24 (per branch) | Branch uplinks and transit (/30) |
 | 10.255.0.0/24 | London internal point-to-point links (/30) |
 | 10.255.1.0/24 | VPN tunnel interfaces (/30) |
@@ -37,11 +37,12 @@ Domain names: internal `corp.bosphorus.test`, public `bosphorus.test`.
 | 60 | WIFI-CORP | 10.10.60.0/24 | LON-CORE-01 | .100–.250 | WLC dynamic interface .10 |
 | 70 | WIFI-GUEST | 10.10.70.0/24 | LON-CORE-01 | .100–.250, DNS → 192.0.2.53 | Internet only |
 | 80 | SERVERS | 10.10.80.0/24 | LON-CORE-02 | none (static) | |
+| 90 | CCTV | 10.10.90.0/24 | LON-CORE-01 | .100–.250 | IoT webcams; may reach only LON-SRV-IOT-01 (TCP 31000) |
 | 900 | TRANSIT | 10.255.0.8/30 | — | — | Core-to-core routed link over Po1 |
 | 998 | PARKING | — | — | — | Unused ports, shut down |
 | 999 | NATIVE | — | — | — | Native VLAN on all trunks, carries no traffic |
 
-VLANs 10, 30, 60 and 70 are active on CORE-01 (60 and 70 because the WLC is attached to CORE-01); 20, 40, 50 and 80 on CORE-02. HSRP active and STP root are always on the same switch.
+VLANs 10, 30, 60, 70 and 90 are active on CORE-01 (60 and 70 because the WLC is attached to CORE-01); 20, 40, 50 and 80 on CORE-02. HSRP active and STP root are always on the same switch.
 
 ## 3. Branch VLANs
 
@@ -54,6 +55,7 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | 50 | VOICE | 10.20.50.0/24 | 10.30.50.0/24 | 10.40.50.0/24 | SW-02 | .100–.175 / .176–.250 | Option 150 → 10.10.50.10 |
 | 60 | WIFI-CORP | 10.20.60.0/24 | 10.30.60.0/24 | 10.40.60.0/24 | SW-01 | .20–.135 / .136–.250 | DNS 10.10.80.10 |
 | 70 | WIFI-GUEST | 10.20.70.0/24 | 10.30.70.0/24 | 10.40.70.0/24 | SW-02 | .100–.175 / .176–.250 | DNS 192.0.2.53, internet only |
+| 90 | CCTV | 10.20.90.0/24 | 10.30.90.0/24 | 10.40.90.0/24 | SW-02 | — (static) | Cameras static: SW-01's at .11, SW-02's at .12, mask /8 (matrix B-58, B-60) |
 | 900 | TRANSIT | 10.20.0.8/30 | 10.30.0.8/30 | 10.40.0.8/30 | — | — | Switch-to-switch routed link over Po1 (SW-01 .9, SW-02 .10) |
 
 ## 4. Interface addressing
@@ -138,6 +140,7 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | | Se0/0/1 | 10.255.2.6/30 | LON-WAN-01 circuit 2 (DTE) |
 | | Gi0/0 | 10.40.0.1/30 | TOR-SW-01 |
 | | Gi0/1 | 10.40.0.5/30 | TOR-SW-02 |
+| | Gi0/2 | 10.40.0.13/30 | TOR-WH-RTR-01 (RIPv2) |
 | | Loopback0 | 10.255.255.21/32 | Router ID |
 | TOR-SW-01 | Gi1/0/22 (routed) | 10.40.0.2/30 | TOR-RTR-01 |
 | | Vlan10/20/50/60/70 | 10.40.x.2/24 | Gateways (HSRP .1) |
@@ -145,6 +148,18 @@ Every branch uses the same VLAN numbers. Gateways are HSRP pairs on the two bran
 | TOR-SW-02 | Gi1/0/22 (routed) | 10.40.0.6/30 | TOR-RTR-01 |
 | | Vlan10/20/50/60/70 | 10.40.x.3/24 | Gateways |
 | | Loopback0 | 10.255.255.23/32 | Router ID, TACACS+ source |
+
+### Toronto warehouse (TOR-WH, 10.40.100.0/22, RIPv2)
+
+A stub site behind TOR-RTR-01 ([ADR 0016](adr/0016-rip-warehouse-second-redistribution.md)). Its whole range sits inside Toronto's 10.40.0.0/16 summary, so London sees no new routes. The router has no Loopback0 for the same reason.
+
+| Device | Interface | Address | Connects to / purpose |
+|---|---|---|---|
+| TOR-WH-RTR-01 | Gi0/0/0 | 10.40.0.14/30 | TOR-RTR-01 Gi0/2 (RIPv2) |
+| | Gi0/0/1.10 | 10.40.102.1/24 | VLAN 10 WH-MGMT |
+| | Gi0/0/1.20 | 10.40.100.1/24 | VLAN 20 WH-USERS, DHCP .100–.250 on the router |
+| | Gi0/0/1.90 | 10.40.101.1/24 | VLAN 90 WH-CCTV, cameras static .11–.12 |
+| TOR-WH-SW-01 | Vlan10 | 10.40.102.2/24 | Management, gateway 10.40.102.1 |
 
 ### Simulated internet
 
@@ -198,6 +213,7 @@ Both edges hold `ip route 203.0.113.0 255.255.255.0 Null0` so the /24 can be adv
 | LON-SRV-AAA-01 (TACACS+, RADIUS) | 10.10.80.11 | 80 |
 | LON-SRV-OPS-01 (Syslog, NTP, TFTP) | 10.10.80.12 | 80 |
 | LON-SRV-INTRA-01 (HTTP, email) | 10.10.80.13 | 80 |
+| LON-SRV-IOT-01 (IoT registration server) | 10.10.80.14 | 80 |
 | LON-MGMT-PC-01 (jump host) | 10.10.10.50 | 10 |
 | LON-PRN-01 | 10.10.30.20 | 30 |
 | LON-PRN-02 | 10.10.40.20 | 40 |
@@ -207,3 +223,7 @@ Both edges hold `ip route 203.0.113.0 255.255.255.0 Null0` so the /24 can be adv
 | INET-WEB-01 | 192.0.2.10 | Internet |
 | INET-DNS-01 | 192.0.2.53 | Internet |
 | INET-HOST-01 (external test host) | 192.0.2.100 | Internet |
+| IST-CAM-01 / IST-CAM-02 | 10.20.90.11 / .12 (mask 255.0.0.0, matrix B-60) | 90 |
+| CHI-CAM-01 / CHI-CAM-02 | 10.30.90.11 / .12 (mask 255.0.0.0) | 90 |
+| TOR-CAM-01 / TOR-CAM-02 | 10.40.90.11 / .12 (mask 255.0.0.0) | 90 |
+| TOR-WH-CAM-01 / TOR-WH-CAM-02 | 10.40.101.11 / .12 (mask 255.0.0.0) | WH 90 |

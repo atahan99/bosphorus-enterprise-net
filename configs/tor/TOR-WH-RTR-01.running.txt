@@ -1,0 +1,186 @@
+Building configuration...
+
+Current configuration : 4221 bytes
+!
+version 16.6.4
+service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname TOR-WH-RTR-01
+!
+login block-for 120 attempts 3 within 60
+!
+!
+enable secret 5 $1$mERr$Oka2zHbRio38vcvW4lQ331
+!
+!
+ip dhcp excluded-address 10.40.100.1 10.40.100.99
+ip dhcp excluded-address 10.40.100.251 10.40.100.255
+!
+ip dhcp pool WH-USERS
+ network 10.40.100.0 255.255.255.0
+ default-router 10.40.100.1
+ dns-server 10.10.80.10
+ domain-name corp.bosphorus.test
+!
+!
+aaa new-model
+!
+aaa authentication login CONSOLE local 
+aaa authentication login default group tacacs+ local 
+!
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+username netadmin privilege 15 secret 5 $1$mERr$Z.S9qHPHOO9eHOgdIj2B21
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+ip ssh time-out 60
+no ip domain-lookup
+ip domain-name corp.bosphorus.test
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface GigabitEthernet0/0/0
+ description TO-TOR-RTR-01-Gi0/2
+ ip address 10.40.0.14 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/0/1
+ description TO-TOR-WH-SW-01-Gi0/1
+ no ip address
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/0/1.10
+ description WH-MGMT
+ encapsulation dot1Q 10
+ ip address 10.40.102.1 255.255.255.0
+!
+interface GigabitEthernet0/0/1.20
+ description WH-USERS
+ encapsulation dot1Q 20
+ ip address 10.40.100.1 255.255.255.0
+ ip access-group ACL-WH-DATA-IN in
+!
+interface GigabitEthernet0/0/1.90
+ description WH-CCTV
+ encapsulation dot1Q 90
+ ip address 10.40.101.1 255.255.255.0
+ ip access-group ACL-CCTV-IN in
+!
+interface GigabitEthernet0/0/2
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+router rip
+ version 2
+ passive-interface default
+ no passive-interface GigabitEthernet0/0/0
+ network 10.0.0.0
+ no auto-summary
+!
+ip classless
+!
+ip flow-export version 9
+!
+!
+ip access-list extended ACL-WH-DATA-IN
+ remark Warehouse users: same off-site policy as ACL-BRANCH-DATA-IN, plus no WH MGMT
+ permit udp any any eq bootps
+ deny ip any 10.40.102.0 0.0.0.255
+ deny ip any 10.40.101.0 0.0.0.255
+ deny ip any 10.40.90.0 0.0.0.255
+ deny ip any 10.40.10.0 0.0.0.255
+ deny ip any 10.40.0.0 0.0.0.255
+ permit ip 10.40.0.0 0.0.255.255 10.40.0.0 0.0.255.255
+ permit tcp 10.40.0.0 0.0.255.255 10.10.10.0 0.0.0.255 established
+ permit icmp 10.40.0.0 0.0.255.255 10.10.10.0 0.0.0.255 echo-reply
+ permit udp 10.40.0.0 0.0.255.255 host 10.10.80.10 eq domain
+ permit tcp 10.40.0.0 0.0.255.255 host 10.10.80.10 eq domain
+ permit tcp 10.40.0.0 0.0.255.255 host 10.10.80.13 eq www
+ permit tcp 10.40.0.0 0.0.255.255 host 10.10.80.13 eq 443
+ permit tcp 10.40.0.0 0.0.255.255 host 10.10.80.13 eq smtp
+ permit tcp 10.40.0.0 0.0.255.255 host 10.10.80.13 eq pop3
+ permit icmp 10.40.0.0 0.0.255.255 10.10.80.0 0.0.0.255 echo
+ permit tcp 10.40.0.0 0.0.255.255 host 172.16.100.10 eq www
+ permit tcp 10.40.0.0 0.0.255.255 host 172.16.100.10 eq 443
+ permit ip 10.40.0.0 0.0.255.255 10.10.20.0 0.0.0.255
+ permit ip 10.40.0.0 0.0.255.255 10.10.30.0 0.0.0.255
+ permit ip 10.40.0.0 0.0.255.255 10.10.60.0 0.0.0.255
+ deny ip any 10.0.0.0 0.255.255.255
+ deny ip any 172.16.0.0 0.15.255.255
+ deny ip any 192.168.0.0 0.0.255.255
+ permit ip 10.40.0.0 0.0.255.255 any
+ip access-list extended sl_def_acl
+ deny tcp any any eq telnet
+ deny tcp any any eq www
+ deny tcp any any eq 22
+ permit tcp any any eq 22
+access-list 99 remark MGMT-SUBNET-ONLY
+access-list 99 permit 10.10.10.0 0.0.0.255
+ip access-list extended ACL-CCTV-IN
+ remark Cameras: HSRP, DHCP, then IoT registration (TCP 31000) to LON-SRV-IOT-01 only
+ permit udp any host 224.0.0.102 eq 1985
+ permit udp any any eq bootps
+ permit icmp 10.40.101.0 0.0.0.255 10.40.101.0 0.0.0.255
+ permit tcp 10.40.101.0 0.0.0.255 host 10.10.80.14 eq 31000
+ deny ip any any
+!
+banner motd ^C
+Authorized access only. bosphorus-enterprise-net lab environment.
+All activity is logged.
+^C
+!
+tacacs-server host 10.10.80.11 key Lab-Tacacs-1
+!
+!
+snmp-server community BSP-RO-Lab RO
+!
+logging 10.10.80.12
+line con 0
+ logging synchronous
+ login authentication CONSOLE
+!
+line aux 0
+!
+line vty 0 4
+ access-class 99 in
+ logging synchronous
+ login authentication default
+ transport input ssh
+!
+!
+ntp authentication-key 1 md5 080D4D4C443711075F5A 7
+ntp authenticate
+ntp trusted-key 1
+ntp server 10.10.80.12 key 1
+!
+end

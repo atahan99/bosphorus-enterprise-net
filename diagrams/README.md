@@ -31,7 +31,10 @@ flowchart TB
   ISPA --- IST["Istanbul: 30 staff, 10.20.0.0/16<br/>IST-RTR-01, IST-SW-01/02 pair, 2 APs"]
   ISPB --- CHI["Chicago: 36 staff, 10.30.0.0/16<br/>CHI-RTR-01, CHI-SW-01/02 pair, 2 APs"]
   WAN -. "two private circuits (serial, PPP/CHAP)" .- TOR["Toronto: 36 staff, 10.40.0.0/16<br/>TOR-RTR-01, TOR-SW-01/02 pair, 2 APs"]
+  TOR -- "RIPv2" --- WH["Toronto warehouse (TOR-WH), 10.40.100.0/22<br/>TOR-WH-RTR-01, TOR-WH-SW-01"]
 ```
+
+Every site, including the warehouse, also has a CCTV VLAN 90 with IoT cameras that register to LON-SRV-IOT-01 (section 8).
 
 Port-level cabling is in [cabling-plan.md](../docs/cabling-plan.md). The full Packet Tracer canvas is in [`screenshots/topology/topology-full.png`](../screenshots/topology/topology-full.png); the physical layout is in section 7.
 
@@ -39,13 +42,13 @@ Port-level cabling is in [cabling-plan.md](../docs/cabling-plan.md). The full Pa
 
 ```mermaid
 flowchart TB
-  C1["LON-CORE-01<br/>STP root + HSRP active:<br/>VLAN 10, 30, 60, 70"]
+  C1["LON-CORE-01<br/>STP root + HSRP active:<br/>VLAN 10, 30, 60, 70, 90"]
   C2["LON-CORE-02<br/>STP root + HSRP active:<br/>VLAN 20, 40, 50, 80"]
   C1 == "Po1 LACP, trunk all VLANs + 900" === C2
-  A1["LON-ACC-01 / 02<br/>ENG desks<br/>VLAN 10, 20, 50"]
-  A3["LON-ACC-03<br/>SALES desks<br/>VLAN 10, 30, 50"]
+  A1["LON-ACC-01 / 02<br/>ENG desks<br/>VLAN 10, 20, 50 (+90 on ACC-01)"]
+  A3["LON-ACC-03<br/>SALES desks<br/>VLAN 10, 30, 50, 90"]
   A4["LON-ACC-04<br/>SALES + FIN-HR desks<br/>VLAN 10, 30, 40, 50"]
-  S1["LON-SRV-SW01<br/>servers, CME, MGMT PC<br/>VLAN 10, 50, 80"]
+  S1["LON-SRV-SW01<br/>servers, IoT server, CME, MGMT PC, 2 cameras<br/>VLAN 10, 50, 80, 90"]
   C1 --- A1 & A3 & A4 & S1
   C2 --- A1 & A3 & A4 & S1
   C1 -- "trunk 10, 60, 70" --- WLC["LON-WLC-01"]
@@ -58,8 +61,8 @@ Every downlink is dual-homed, with root guard on the core side (Packet Tracer ha
 ```mermaid
 flowchart TB
   UP["IST-RTR-01 (OSPF area 1) / CHI-RTR-01 (OSPF area 2) / TOR-RTR-01 (EIGRP)"]
-  S1["SW-01 (3650)<br/>HSRP active 10, 20, 60<br/>15-18 desks, AP BSP-CORP"]
-  S2["SW-02 (3650)<br/>HSRP active 50, 70<br/>15-18 desks, printer, AP BSP-GUEST"]
+  S1["SW-01 (3650)<br/>HSRP active 10, 20, 60<br/>15-18 desks, AP BSP-CORP, camera"]
+  S2["SW-02 (3650)<br/>HSRP active 50, 70, 90<br/>15-18 desks, printer, AP BSP-GUEST, camera"]
   UP -- "routed /30, Gi1/0/22" --- S1
   UP -- "routed /30, Gi1/0/22" --- S2
   S1 == "Po1 LACP (Gi1/0/23-24): all VLANs + transit VLAN 900" === S2
@@ -93,6 +96,11 @@ flowchart LR
       TORC["TOR-SW-01/02"]
       TOR --- TORC
     end
+    subgraph RIP["RIPv2"]
+      WH["TOR-WH-RTR-01<br/>warehouse 10.40.100.0/22"]
+    end
+    WH -- "RIP into EIGRP (one way)" --- TOR
+    TOR -- "default only" --- WH
   end
   ISPA -- "eBGP: two /25s out, default in" --- E1
   ISPB -- "eBGP: /24 out, default in" --- E2
@@ -105,7 +113,7 @@ flowchart LR
   WAN -- "2 circuits; mutual redistribution" --- TOR
 ```
 
-Summary at the ABRs: `10.10.0.0/16` into areas 1 and 2. The branch subnets reach area 0 unsummarised (matrix B-48). Tunnel costs can't be set in PT (matrix B-40): EDGE-02's cost-1000 core link makes EDGE-01 the primary path.
+The warehouse adds a second, one-way redistribution point at TOR-RTR-01; its routes stay inside the 10.40.0.0/16 summary, so London's tables don't change ([ADR 0016](../docs/adr/0016-rip-warehouse-second-redistribution.md)). Summary at the ABRs: `10.10.0.0/16` into areas 1 and 2. The branch subnets reach area 0 unsummarised (matrix B-48). Tunnel costs can't be set in PT (matrix B-40): EDGE-02's cost-1000 core link makes EDGE-01 the primary path.
 
 ## 4. Firewall policy (London edge)
 
@@ -164,16 +172,17 @@ Packet Tracer computes Wi-Fi range from the Physical view, so each site has its 
 flowchart TB
   subgraph IC["Intercity map"]
     subgraph LONP["London"]
-      LHQ["London HQ<br/>wiring closet: all LON network gear<br/>office: desks, phones, printers, WLC APs, Wi-Fi clients"]
+      LHQ["London HQ<br/>wiring closet: all LON network gear, servers incl. IoT server<br/>office: desks, phones, printers, WLC APs, Wi-Fi clients, 4 cameras"]
     end
     subgraph ISTP["Istanbul"]
-      IOF["Istanbul Office<br/>closet: IST-RTR-01, IST-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet"]
+      IOF["Istanbul Office<br/>closet: IST-RTR-01, IST-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet, 2 cameras"]
     end
     subgraph CHIP["Chicago"]
-      COF["Chicago Office<br/>closet: CHI-RTR-01, CHI-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet"]
+      COF["Chicago Office<br/>closet: CHI-RTR-01, CHI-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet, 2 cameras"]
     end
     subgraph TORP["Toronto"]
-      TOF["Toronto Office<br/>closet: TOR-RTR-01, TOR-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet"]
+      TOF["Toronto Office<br/>closet: TOR-RTR-01, TOR-SW-01/02<br/>office: PCs, phone, 2 APs, laptop, tablet, 2 cameras"]
+      TWH["warehouse<br/>TOR-WH-RTR-01, TOR-WH-SW-01, PC, 2 cameras"]
     end
     subgraph NETP["Internet"]
       DC["ISP Datacenter<br/>closet: ISP-A, ISP-B, INET-CORE, INET-SW, web and DNS servers<br/>floor: INET-HOST-01"]
@@ -202,6 +211,10 @@ flowchart LR
   DEV -- "syslog, NTP, TFTP backups" --> OPS
   CLI -- "DHCP relay, DNS" --> CORE
   PH -- "SCCP registration" --> CME
+  CAM["12 IoT cameras<br/>VLAN 90, every site"]
+  IOT["LON-SRV-IOT-01 10.10.80.14<br/>IoT registration server"]
+  CAM -- "TCP 31000 only" --> IOT
+  MGMT -- "HTTP dashboard" --> IOT
 ```
 
 Branch DHCP is local, served by each branch switch pair ([ADR 0009](../docs/adr/0009-local-dhcp-istanbul.md)).
